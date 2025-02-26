@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import "./IBrevisProof.sol";
 import "./Ownable.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
@@ -19,15 +20,20 @@ struct Config {
 contract Campaign is Ownable {
     uint64 public constant GRACE_PERIOD = 3600*24*10; // seconds after campaign end
     Config public config;
-    bytes32 public root; // merkle tree root
+    IBrevisProof public brvProof;
+    bytes32 public vkHash;
 
+    // user->token cumulative rewards
+    mapping(address => mapping(address => uint256)) public rewards;
     // user->token already claimed amount
     mapping(address => mapping(address => uint256)) public claimed;
 
-    // called by proxy to properly set storage of proxy contract
-    function init(Config calldata cfg) external {
-        initOwner();
-        config = cfg;        
+    // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
+    function init(Config calldata cfg, address owner, IBrevisProof _brv, bytes32 _vkHash) external {
+        initOwner(owner);
+        config = cfg;
+        brvProof = _brv;
+        vkHash = _vkHash;
     }
 
     // after grace period, refund all remaining balance to creator
@@ -40,44 +46,44 @@ contract Campaign is Ownable {
         }
     }
 
-    // claim reward
-    function claim(address earner, AddrAmt[] memory totalRewards, bytes32[] memory proof) external {
-        _claim(earner, earner, totalRewards, proof);
+    // claim reward, send erc20 to earner
+    function claim(address earner) external {
+        _claim(earner, earner);
     }
 
     // msg.sender is the earner
-    function claimWithRecipient(address to, AddrAmt[] memory totalRewards, bytes32[] memory proof) external {
-        _claim(msg.sender, to, totalRewards, proof);
+    function claimWithRecipient(address to) external {
+        _claim(msg.sender, to);
     }
 
-    function _claim(address earner, address to, AddrAmt[] memory totalRewards, bytes32[] memory proof) internal {
-        bytes memory tohash = abi.encodePacked(earner);
-        for (uint256 i = 0; i < totalRewards.length; i++) {
-            tohash = abi.encodePacked(tohash, totalRewards[i].token, totalRewards[i].amount);
+    function _claim(address earner, address to) internal {
+        Config memory cfg = config;
+        for (uint256 i=0;i<cfg.rewards.length;i++) {
+            address erc20 = cfg.rewards[i].token;
+            uint256 tosend = rewards[earner][erc20] - claimed[earner][erc20];
+            claimed[earner][erc20] = rewards[earner][erc20];
+            // send token
+            IERC20(erc20).transfer(to, tosend);
         }
-        bytes32 leaf = keccak256(tohash);
-        require(_verifyProof(leaf, proof), "invalid proof");
-        for (uint256 i = 0; i < totalRewards.length; i++) {
-            address erc20 = totalRewards[i].token;
-            uint256 tosend = totalRewards[i].amount - claimed[earner][erc20];
-            if (tosend>0) {
-                claimed[earner][erc20] = totalRewards[i].amount;
-                IERC20(erc20).transfer(to, tosend);
+    }
+
+    // update rewards map w/ zk proof, _appOutput is in the form of [earner:amt u128:amt u128]
+    function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external {
+        (, bytes32 appCommitHash, bytes32 appVkHash) = brvProof.submitProof(uint64(block.chainid), _proof);
+        require(appVkHash == vkHash, "mismatch vkhash");
+        require(appCommitHash == keccak256(_appOutput), "invalid circuit output");
+        Config memory cfg = config;
+        uint256 numTokens = cfg.rewards.length;
+        for (uint256 idx = 0; idx < _appOutput.length; idx += 20+16*numTokens) {
+            address earner = address(bytes20(_appOutput[idx:idx+20]));
+            for (uint256 i=0; i < numTokens; i+=1) {
+                uint256 amount = uint128(bytes16(_appOutput[idx+20+16*i:idx+20+16*i+16]));
+                rewards[earner][cfg.rewards[i].token] = amount;
             }
         }
     }
 
-    function _verifyProof(bytes32 leaf, bytes32[] memory proof) internal view returns (bool) {
-        bytes32 hash = leaf;
-
-        for (uint256 i = 0; i < proof.length; i++) {
-            if (hash < proof[i]) {
-                hash = keccak256(abi.encodePacked(hash, proof[i]));
-            } else {
-                hash = keccak256(abi.encodePacked(proof[i], hash));
-            }
-        }
-
-        return hash == root;
+    function setvk(bytes32 _vk) external onlyOwner {
+        vkHash = _vk;
     }
 }

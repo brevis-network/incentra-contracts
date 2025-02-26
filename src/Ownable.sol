@@ -39,6 +39,12 @@ abstract contract Ownable {
         _setOwner(msg.sender);
     }
 
+    // allow setting owner different from deployer
+    function initOwner(address newowner) internal {
+        require(_owner == address(0), "owner already set");
+        _setOwner(newowner);
+    }
+
     /**
      * @dev Returns the address of the current owner.
      */
