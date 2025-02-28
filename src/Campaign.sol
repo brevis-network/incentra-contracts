@@ -18,7 +18,7 @@ struct Config {
 }
 
 contract Campaign is Ownable {
-    uint64 public constant GRACE_PERIOD = 3600*24*10; // seconds after campaign end
+    uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
     IBrevisProof public brvProof;
     bytes32 public vkHash;
@@ -39,8 +39,8 @@ contract Campaign is Ownable {
     // after grace period, refund all remaining balance to creator
     function refund() external {
         Config memory cfg = config;
-        require(block.timestamp>cfg.startTime+cfg.duration+GRACE_PERIOD, "too soon");
-        for (uint256 i=0;i<cfg.rewards.length;i++) {
+        require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
             IERC20(erc20).transfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
         }
@@ -58,7 +58,7 @@ contract Campaign is Ownable {
 
     function _claim(address earner, address to) internal {
         Config memory cfg = config;
-        for (uint256 i=0;i<cfg.rewards.length;i++) {
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
             uint256 tosend = rewards[earner][erc20] - claimed[earner][erc20];
             claimed[earner][erc20] = rewards[earner][erc20];
@@ -74,13 +74,33 @@ contract Campaign is Ownable {
         require(appCommitHash == keccak256(_appOutput), "invalid circuit output");
         Config memory cfg = config;
         uint256 numTokens = cfg.rewards.length;
-        for (uint256 idx = 0; idx < _appOutput.length; idx += 20+16*numTokens) {
-            address earner = address(bytes20(_appOutput[idx:idx+20]));
-            for (uint256 i=0; i < numTokens; i+=1) {
-                uint256 amount = uint128(bytes16(_appOutput[idx+20+16*i:idx+20+16*i+16]));
+        for (uint256 idx = 0; idx < _appOutput.length; idx += 20 + 16 * numTokens) {
+            address earner = address(bytes20(_appOutput[idx:idx + 20]));
+            for (uint256 i = 0; i < numTokens; i += 1) {
+                uint256 amount = uint128(bytes16(_appOutput[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 rewards[earner][cfg.rewards[i].token] = amount;
             }
         }
+    }
+
+    function viewTotalRewards(address earner) external view returns (AddrAmt[] memory) {
+        Config memory cfg = config;
+        AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards[earner][cfg.rewards[i].token]});
+        }
+        return ret;
+    }
+
+    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        Config memory cfg = config;
+        AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            address erc20 = cfg.rewards[i].token;
+            uint256 tosend = rewards[earner][erc20] - claimed[earner][erc20];
+            ret[i] = AddrAmt({token: erc20, amount: tosend});
+        }
+        return ret;
     }
 
     function setvk(bytes32 _vk) external onlyOwner {
