@@ -7,17 +7,21 @@ import "./Rewards.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
+struct AddrAmt {
+    address token;
+    uint256 amount;
+}
+
 struct Config {
     address creator;
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
+    AddrAmt[] rewards; // list of [reward token and total amount]
     address pooladdr; // which pool this campaign is for
-    address[] tokens; // reward token addr
-    uint256[] amounts; // corresponding amount of reward token
 }
 
 contract Campaign is Ownable, Rewards {
-    uint64 public constant GRACE_PERIOD = 3600*24*10; // seconds after campaign end
+    uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
     IBrevisProof public brvProof;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
@@ -25,7 +29,11 @@ contract Campaign is Ownable, Rewards {
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(Config calldata cfg, IBrevisProof _brv) external {
         initOwner();
-        initTokens(cfg.tokens);
+        address[] memory _tokens = new address[](cfg.rewards.length);
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            _tokens[i] = cfg.rewards[i].token;
+        }
+        initTokens(_tokens);
         config = cfg;
         brvProof = _brv;
     }
@@ -33,9 +41,9 @@ contract Campaign is Ownable, Rewards {
     // after grace period, refund all remaining balance to creator
     function refund() external {
         Config memory cfg = config;
-        require(block.timestamp>cfg.startTime+cfg.duration+GRACE_PERIOD, "too soon");
-        for (uint256 i=0;i<cfg.tokens.length;i++) {
-            address erc20 = cfg.tokens[i];
+        require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            address erc20 = cfg.rewards[i].token;
             IERC20(erc20).transfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
         }
     }
@@ -79,5 +87,26 @@ contract Campaign is Ownable, Rewards {
 
     function setVk(uint8 appid, bytes32 _vk) external onlyOwner {
         vkMap[appid] = _vk;
+    }
+
+    // ===== view =====
+    function viewTotalRewards(address earner) external view returns (AddrAmt[] memory) {
+        Config memory cfg = config;
+        AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards[earner][cfg.rewards[i].token]});
+        }
+        return ret;
+    }
+
+    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        Config memory cfg = config;
+        AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            address erc20 = cfg.rewards[i].token;
+            uint256 tosend = rewards[earner][erc20] - claimed[earner][erc20];
+            ret[i] = AddrAmt({token: erc20, amount: tosend});
+        }
+        return ret;
     }
 }
