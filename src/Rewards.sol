@@ -12,6 +12,9 @@ contract Rewards is TotalFee {
     mapping(address => mapping(address => uint256)) public claimed;
     // user-> last attested epoch
     mapping(address => uint32) public lastEpoch;
+    // user may opt-in to other projects to earn more rewards
+    // indirect contract -> user -> last attested epoch to avoid replay
+    mapping(address => mapping(address => uint32)) public indirectEpoch;
 
     function initTokens(address[] memory _tokens) internal {
         for (uint256 i=0;i<_tokens.length;i+=1) {
@@ -33,6 +36,27 @@ contract Rewards is TotalFee {
             address earner = address(bytes20(raw[idx:idx+20]));
             require(epoch > lastEpoch[earner], "invalid epoch");
             lastEpoch[earner] = epoch;
+            for (uint256 i=0; i < numTokens; i+=1) {
+                uint256 amount = uint128(bytes16(raw[idx+20+16*i:idx+20+16*i+16]));
+                rewards[earner][tokens[i]] += amount;
+            }
+        }
+    }
+
+    // raw is epoch, indirect contract, [usr,amt1,amt2..] 
+    function addIndirectRewards(bytes calldata raw) internal {
+        uint32 epoch = uint32(bytes4(raw[0:4]));
+        address indirect = address(bytes20(raw[4:24]));
+        uint256 numTokens = tokens.length;
+        for (uint256 idx = 24; idx < raw.length; idx += 20+16*numTokens) {
+            address earner = address(bytes20(raw[idx:idx+20]));
+            require(epoch > indirectEpoch[indirect][earner], "invalid epoch");
+            indirectEpoch[indirect][earner] = epoch;
+            require(epoch >= lastEpoch[earner], "indirect epoch is smaller than epoch");
+            if (epoch > lastEpoch[earner]) {
+                // update lastEpoch to enforce indirect must be submitted after main
+                lastEpoch[earner] = epoch;
+            }
             for (uint256 i=0; i < numTokens; i+=1) {
                 uint256 amount = uint128(bytes16(raw[idx+20+16*i:idx+20+16*i+16]));
                 rewards[earner][tokens[i]] += amount;

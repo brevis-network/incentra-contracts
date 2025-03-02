@@ -50,18 +50,24 @@ contract Campaign is Ownable, Rewards {
         _claim(msg.sender, to);
     }
 
-    // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external {
-        _checkProof(_proof, _appOutput);
-        addRewards( _appOutput[1:]);
-    }
-
     // _appOutput is 1(totalfee app id), pooladdr, epoch, t0, t1
     function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external {
         _checkProof(_proof, _appOutput);
         address pooladdr = address(bytes20(_appOutput[1:21]));
         require(pooladdr == config.pooladdr, "mismatch pool addr");
         updateFee(_appOutput[21:]);
+    }
+
+    // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
+    function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external {
+        _checkProof(_proof, _appOutput);
+        addRewards( _appOutput[1:]);
+    }
+
+    // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
+    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput) external {
+        _checkProof(_proof, _appOutput);
+        addIndirectRewards( _appOutput[1:]);
     }
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
