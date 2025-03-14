@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "./IBrevisProof.sol";
+import "./BrevisProofApp.sol";
 import "./Ownable.sol";
 import "./Rewards.sol";
 
@@ -20,10 +20,9 @@ struct Config {
     address pooladdr; // which pool this campaign is for
 }
 
-contract Campaign is Ownable, Rewards {
+contract Campaign is BrevisProofApp, Ownable, Rewards {
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
-    IBrevisProof public brvProof;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
@@ -35,7 +34,7 @@ contract Campaign is Ownable, Rewards {
         }
         initTokens(_tokens);
         config = cfg;
-        brvProof = _brv;
+        brevisProof = _brv;
         // 1: TotalFee 2: Rewards 3+: Others
         for (uint8 i = 0; i < vks.length; i++) {
             vkMap[i+1] = vks[i];
@@ -73,20 +72,18 @@ contract Campaign is Ownable, Rewards {
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external {
         _checkProof(_proof, _appOutput);
-        addRewards( _appOutput[1:]);
+        addRewards(_appOutput[1:]);
     }
 
     // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
     function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput) external {
         _checkProof(_proof, _appOutput);
-        addIndirectRewards( _appOutput[1:]);
+        addIndirectRewards(_appOutput[1:]);
     }
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
-        (, bytes32 appCommitHash, bytes32 appVkHash) = brvProof.submitProof(uint64(block.chainid), _proof);
         uint8 appid = uint8(_appOutput[0]);
-        require(appVkHash == vkMap[appid], "mismatch vkhash");
-        require(appCommitHash == keccak256(_appOutput), "invalid circuit output");
+        _checkBrevisProof(uint64(block.chainid), _proof, _appOutput, vkMap[appid]);
     }
 
     function setVk(uint8 appid, bytes32 _vk) external onlyOwner {
