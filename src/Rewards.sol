@@ -34,7 +34,7 @@ contract Rewards is TotalFee {
         uint256 numTokens = tokens.length;
         for (uint256 idx = 36; idx < raw.length; idx += 20+16*numTokens) { 
             address earner = address(bytes20(raw[idx:idx+20]));
-            // skip for empty address placeholder
+            // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
                 break;
             }
@@ -54,7 +54,7 @@ contract Rewards is TotalFee {
         uint256 numTokens = tokens.length;
         for (uint256 idx = 24; idx < raw.length; idx += 20+16*numTokens) {
             address earner = address(bytes20(raw[idx:idx+20]));
-            // skip for empty address placeholder
+            // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
                 break;
             }
