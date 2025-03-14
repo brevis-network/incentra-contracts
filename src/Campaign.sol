@@ -26,7 +26,7 @@ contract Campaign is BrevisProofApp, Ownable, Rewards {
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
-    function init(Config calldata cfg, IBrevisProof _brv) external {
+    function init(Config calldata cfg, IBrevisProof _brv, bytes32[] calldata vks) external {
         initOwner();
         address[] memory _tokens = new address[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
@@ -35,6 +35,10 @@ contract Campaign is BrevisProofApp, Ownable, Rewards {
         initTokens(_tokens);
         config = cfg;
         brevisProof = _brv;
+        // 1: TotalFee 2: Rewards 3+: Others
+        for (uint8 i = 0; i < vks.length; i++) {
+            vkMap[i+1] = vks[i];
+        } 
     }
 
     // after grace period, refund all remaining balance to creator

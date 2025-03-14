@@ -32,8 +32,12 @@ contract Rewards is TotalFee {
         require(fee.token0Amt == t0fee, "token0 fee mismatch");
         require(fee.token1Amt == t1fee, "token1 fee mismatch");
         uint256 numTokens = tokens.length;
-        for (uint256 idx = 36; idx < raw.length; idx += 20+16*numTokens) {
+        for (uint256 idx = 36; idx < raw.length; idx += 20+16*numTokens) { 
             address earner = address(bytes20(raw[idx:idx+20]));
+            // skip empty address placeholders for the rest of array
+            if (earner == address(0)) {
+                break;
+            }
             require(epoch > lastEpoch[earner], "invalid epoch");
             lastEpoch[earner] = epoch;
             for (uint256 i=0; i < numTokens; i+=1) {
@@ -50,6 +54,10 @@ contract Rewards is TotalFee {
         uint256 numTokens = tokens.length;
         for (uint256 idx = 24; idx < raw.length; idx += 20+16*numTokens) {
             address earner = address(bytes20(raw[idx:idx+20]));
+            // skip empty address placeholders for the rest of array
+            if (earner == address(0)) {
+                break;
+            }
             require(epoch > indirectEpoch[indirect][earner], "invalid epoch");
             indirectEpoch[indirect][earner] = epoch;
             require(epoch >= lastEpoch[earner], "indirect epoch is smaller than epoch");
