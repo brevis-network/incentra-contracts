@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./BrevisProofApp.sol";
-import "./Ownable.sol";
+import "./Whitelist.sol";
 import "./Rewards.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
@@ -20,14 +20,14 @@ struct Config {
     address pooladdr; // which pool this campaign is for
 }
 
-contract Campaign is BrevisProofApp, Ownable, Rewards {
+contract Campaign is BrevisProofApp, Whitelist, Rewards {
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
-    function init(Config calldata cfg, IBrevisProof _brv, bytes32[] calldata vks) external {
-        initOwner();
+    function init(Config calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
+        initOwner(owner);
         address[] memory _tokens = new address[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             _tokens[i] = cfg.rewards[i].token;
@@ -62,7 +62,7 @@ contract Campaign is BrevisProofApp, Ownable, Rewards {
     }
 
     // _appOutput is 1(totalfee app id), pooladdr, epoch, t0, t1
-    function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external {
+    function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
         address pooladdr = address(bytes20(_appOutput[1:21]));
         require(pooladdr == config.pooladdr, "mismatch pool addr");
@@ -70,13 +70,13 @@ contract Campaign is BrevisProofApp, Ownable, Rewards {
     }
 
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external {
+    function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
         addRewards(_appOutput[1:]);
     }
 
     // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput) external {
+    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
         addIndirectRewards(_appOutput[1:]);
     }
