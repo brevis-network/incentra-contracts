@@ -7,11 +7,6 @@ import "./Rewards.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-struct AddrAmt {
-    address token;
-    uint256 amount;
-}
-
 struct Config {
     address creator;
     uint64 startTime;
@@ -37,8 +32,8 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         brevisProof = _brv;
         // 1: TotalFee 2: Rewards 3+: Others
         for (uint8 i = 0; i < vks.length; i++) {
-            vkMap[i+1] = vks[i];
-        } 
+            vkMap[i + 1] = vks[i];
+        }
     }
 
     // after grace period, refund all remaining balance to creator
