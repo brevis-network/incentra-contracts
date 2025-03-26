@@ -14,17 +14,17 @@ contract Rewards is TotalFee {
     event RewardsClaimed(address indexed user, AddrAmt[] claimedRewards);
 
     address[] public tokens; // addr list of reward tokens
-    // user->token cumulative rewards
+    // user -> token -> cumulative rewards
     mapping(address => mapping(address => uint256)) public rewards;
-    // user->token already claimed amount
+    // user -> token -> claimed amount
     mapping(address => mapping(address => uint256)) public claimed;
 
-    // token->total rewards
+    // token -> total rewards
     mapping(address => uint256) public tokenCumulativeRewards;
-    // token->total claimed amount
+    // token -> total claimed amount
     mapping(address => uint256) public tokenClaimedRewards;
 
-    // user-> last attested epoch
+    // user -> last attested epoch
     mapping(address => uint32) public lastEpoch;
     // user may opt-in to other projects to earn more rewards
     // indirect contract -> user -> last attested epoch to avoid replay
