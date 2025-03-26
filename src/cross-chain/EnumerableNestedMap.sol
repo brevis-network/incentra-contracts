@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract EnumerableNestedMap {
+library EnumerableNestedMap {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error EnumerableMapNonexistentKey(address key);
@@ -38,24 +38,6 @@ contract EnumerableNestedMap {
 
     function get(UserTokenAmountMap storage map, address user, address token) internal view returns (uint256 amount) {
         mapping(address => uint256) storage tokenAmountMap = map._values[user];
-        amount = tokenAmountMap[token];
-        if (amount == 0 && !contains(map, user)) {
-            revert EnumerableMapNonexistentKey(user);
-        }
-        return amount;
-    }
-
-    function tryGet(UserTokenAmountMap storage map, address user, address token)
-        internal
-        view
-        returns (bool exists, uint256 amount)
-    {
-        mapping(address => uint256) storage tokenAmountMap = map._values[user];
-        amount = tokenAmountMap[token];
-        if (amount == 0) {
-            return (contains(map, user), 0);
-        } else {
-            return (true, amount);
-        }
+        return tokenAmountMap[token];
     }
 }
