@@ -15,13 +15,10 @@ contract RewardsSubmission is TotalFee {
     using EnumerableNestedMap for EnumerableNestedMap.UserTokenAmountMap;
 
     event RewardsAdded(address indexed user, AddrAmt[] newRewards);
-    event RewardsClaimed(address indexed user, AddrAmt[] claimedRewards);
 
     address[] public tokens; // addr list of reward tokens
     // user -> token -> cumulative rewards
     EnumerableNestedMap.UserTokenAmountMap private rewards;
-    // user -> token -> claimed amount
-    mapping(address => mapping(address => uint256)) public claimed;
 
     // token -> total rewards
     mapping(address => uint256) public tokenCumulativeRewards;
@@ -33,11 +30,6 @@ contract RewardsSubmission is TotalFee {
     // user may opt-in to other projects to earn more rewards
     // indirect contract -> user -> last attested epoch to avoid replay
     mapping(address => mapping(address => uint32)) public indirectEpoch;
-
-    // Storage for merkle roots generation
-    EnumerableSet.Bytes32Set subRoots;
-    uint256[] subRootUserIndexStart;
-    bytes32 public topRoot;
 
     function initTokens(address[] memory _tokens) internal {
         for (uint256 i = 0; i < _tokens.length; i += 1) {
