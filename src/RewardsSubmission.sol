@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./EnumerableNestedMap.sol";
-import "../TotalFee.sol";
+import "./lib/EnumerableMap.sol";
+import "./TotalFee.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 struct AddrAmt {
@@ -11,14 +11,14 @@ struct AddrAmt {
     uint256 amount;
 }
 
-contract RewardsSubmission is TotalFee {
-    using EnumerableNestedMap for EnumerableNestedMap.UserTokenAmountMap;
+abstract contract RewardsSubmission is TotalFee {
+    using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     event RewardsAdded(address indexed user, AddrAmt[] newRewards);
 
     address[] public tokens; // addr list of reward tokens
     // user -> token -> cumulative rewards
-    EnumerableNestedMap.UserTokenAmountMap private rewards;
+    EnumerableMap.UserTokenAmountMap internal rewards;
 
     // token -> total rewards
     mapping(address => uint256) public tokenCumulativeRewards;
@@ -31,7 +31,7 @@ contract RewardsSubmission is TotalFee {
     // indirect contract -> user -> last attested epoch to avoid replay
     mapping(address => mapping(address => uint32)) public indirectEpoch;
 
-    function initTokens(address[] memory _tokens) internal {
+    function _initTokens(address[] memory _tokens) internal {
         for (uint256 i = 0; i < _tokens.length; i += 1) {
             tokens.push(_tokens[i]);
         }
@@ -39,7 +39,7 @@ contract RewardsSubmission is TotalFee {
 
     // parse circuit output, check and add new reward to total
     // epoch, totalFee0, totalFee1, [usr,amt1,amt2..]
-    function addRewards(bytes calldata raw) internal {
+    function _addRewards(bytes calldata raw, bool enumerable) internal {
         uint32 epoch = uint32(bytes4(raw[0:4]));
         uint128 t0fee = uint128(bytes16(raw[4:20]));
         uint128 t1fee = uint128(bytes16(raw[20:36]));
@@ -59,7 +59,7 @@ contract RewardsSubmission is TotalFee {
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 uint256 currentAmount = rewards.get(earner, tokens[i]);
-                rewards.set(earner, tokens[i], currentAmount + amount);
+                rewards.set(earner, tokens[i], currentAmount + amount, enumerable);
                 tokenCumulativeRewards[tokens[i]] += amount;
                 newRewards[i].token = tokens[i];
                 newRewards[i].amount = amount;
@@ -69,7 +69,7 @@ contract RewardsSubmission is TotalFee {
     }
 
     // raw is epoch, indirect contract, [usr,amt1,amt2..]
-    function addIndirectRewards(bytes calldata raw) internal {
+    function _addIndirectRewards(bytes calldata raw, bool enumerable) internal {
         uint32 epoch = uint32(bytes4(raw[0:4]));
         address indirect = address(bytes20(raw[4:24]));
         uint256 numTokens = tokens.length;
@@ -90,12 +90,16 @@ contract RewardsSubmission is TotalFee {
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 uint256 currentAmount = rewards.get(earner, tokens[i]);
-                rewards.set(earner, tokens[i], currentAmount + amount);
+                rewards.set(earner, tokens[i], currentAmount + amount, enumerable);
                 tokenCumulativeRewards[tokens[i]] += amount;
                 newRewards[i].token = tokens[i];
                 newRewards[i].amount = amount;
             }
             emit RewardsAdded(earner, newRewards);
         }
+    }
+
+    function getRewardAmount(address user, address token) public view returns (uint256) {
+        return rewards.get(user, token);
     }
 }

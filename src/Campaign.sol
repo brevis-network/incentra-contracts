@@ -27,7 +27,7 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             _tokens[i] = cfg.rewards[i].token;
         }
-        initTokens(_tokens);
+        _initTokens(_tokens);
         config = cfg;
         brevisProof = _brv;
         // 1: TotalFee 2: Rewards 3+: Others
@@ -61,19 +61,19 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         _checkProof(_proof, _appOutput);
         address pooladdr = address(bytes20(_appOutput[1:21]));
         require(pooladdr == config.pooladdr, "mismatch pool addr");
-        updateFee(_appOutput[21:]);
+        _updateFee(_appOutput[21:]);
     }
 
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
-        addRewards(_appOutput[1:]);
+        _addRewards(_appOutput[1:], false);
     }
 
     // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
     function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
-        addIndirectRewards(_appOutput[1:]);
+        _addIndirectRewards(_appOutput[1:], false);
     }
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
@@ -90,7 +90,7 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         Config memory cfg = config;
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
-            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards[earner][cfg.rewards[i].token]});
+            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: getRewardAmount(earner, cfg.rewards[i].token)});
         }
         return ret;
     }
@@ -100,7 +100,7 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
-            uint256 tosend = rewards[earner][erc20] - claimed[earner][erc20];
+            uint256 tosend = getRewardAmount(earner, erc20) - claimed[earner][erc20];
             ret[i] = AddrAmt({token: erc20, amount: tosend});
         }
         return ret;
