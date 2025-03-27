@@ -11,7 +11,7 @@ struct AddrAmt {
     uint256 amount;
 }
 
-abstract contract RewardsSubmission is TotalFee {
+abstract contract AddRewards is TotalFee {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     event RewardsAdded(address indexed user, AddrAmt[] newRewards);

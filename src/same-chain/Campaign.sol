@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "./BrevisProofApp.sol";
-import "./Whitelist.sol";
+import "../BrevisProofApp.sol";
+import "../Whitelist.sol";
+import "../lib/EnumerableMap.sol";
 import "./Rewards.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
@@ -16,6 +17,8 @@ struct Config {
 }
 
 contract Campaign is BrevisProofApp, Whitelist, Rewards {
+    using EnumerableMap for EnumerableMap.UserTokenAmountMap;
+
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
@@ -90,7 +93,7 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         Config memory cfg = config;
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
-            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: getRewardAmount(earner, cfg.rewards[i].token)});
+            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards.get(earner, cfg.rewards[i].token)});
         }
         return ret;
     }
@@ -100,7 +103,7 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
-            uint256 tosend = getRewardAmount(earner, erc20) - claimed[earner][erc20];
+            uint256 tosend = rewards.get(earner, erc20) - claimed[earner][erc20];
             ret[i] = AddrAmt({token: erc20, amount: tosend});
         }
         return ret;

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "./RewardsSubmission.sol";
-import "./lib/EnumerableMap.sol";
+import "../AddRewards.sol";
+import "../lib/EnumerableMap.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-abstract contract Rewards is RewardsSubmission {
+abstract contract Rewards is AddRewards {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     event RewardsClaimed(address indexed user, AddrAmt[] claimedRewards);
