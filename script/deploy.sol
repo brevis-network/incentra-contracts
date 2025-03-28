@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import {Campaign} from "../src/Campaign.sol";
+import {Campaign} from "../src/concentrated-liquidity/CampaignCL.sol";
 
 contract Deploy is Script {
     function run() public {

@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./AddRewards.sol";
-import "./lib/EnumerableMap.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-abstract contract Rewards is AddRewards {
-    using EnumerableMap for EnumerableMap.UserTokenAmountMap;
+import "../RewardsStorage.sol";
+import "../../lib/EnumerableMap.sol";
 
-    event RewardsClaimed(address indexed user, uint256[] claimedRewards);
+// claim campaign rewards on chain X
+abstract contract RewardsClaim is RewardsStorage {
+    using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     // user -> token -> claimed amount
     mapping(address => mapping(address => uint256)) public claimed;
+
+    // token -> total claimed amount
+    mapping(address => uint256) public tokenClaimedRewards;
+
+    event RewardsClaimed(address indexed user, uint256[] claimedRewards);
 
     function _claim(address earner, address to) internal {
         uint256[] memory claimedRewards = new uint256[](tokens.length);

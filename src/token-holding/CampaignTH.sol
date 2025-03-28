@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./BrevisProofApp.sol";
-import "./Whitelist.sol";
-import "./Rewards.sol";
-import "./lib/EnumerableMap.sol";
+import "../BrevisProofApp.sol";
+import "../access/Whitelist.sol";
+import "../lib/EnumerableMap.sol";
+import "./RewardsTH.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
@@ -18,10 +18,10 @@ struct Config {
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
     AddrAmt[] rewards; // list of [reward token and total amount]
-    address pooladdr; // which pool this campaign is for
+    address erc20; // which erc20 is used for token holding
 }
 
-contract Campaign is BrevisProofApp, Whitelist, Rewards {
+contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
@@ -64,24 +64,10 @@ contract Campaign is BrevisProofApp, Whitelist, Rewards {
         _claim(msg.sender, to);
     }
 
-    // _appOutput is 1(totalfee app id), pooladdr, epoch, t0, t1
-    function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
-        _checkProof(_proof, _appOutput);
-        address pooladdr = address(bytes20(_appOutput[1:21]));
-        require(pooladdr == config.pooladdr, "mismatch pool addr");
-        _updateFee(_appOutput[21:]);
-    }
-
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
-        _addRewards(_appOutput[1:], false);
-    }
-
-    // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
-        _checkProof(_proof, _appOutput);
-        _addIndirectRewards(_appOutput[1:], false);
+        _addRewards(_appOutput[1:]);
     }
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
