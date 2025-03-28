@@ -8,7 +8,7 @@ import "../../access/Whitelist.sol";
 import "../../lib/EnumerableMap.sol";
 import "../RewardsStorage.sol";
 
-// generate campaign rewards merkle root and proof on chain Y
+// generate campaign rewards merkle root and proof on one chain, which will be claimed on another chain
 abstract contract RewardsMerkle is RewardsStorage, Whitelist {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;

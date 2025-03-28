@@ -23,7 +23,7 @@ struct Config {
     address pooladdr; // which pool this campaign is for
 }
 
-// submit campaign rewards on chain Y
+// submit campaign rewards on one chain, which will be claimed on another chain
 contract RewardsSubmissionCL is AddRewards, RewardsMerkle, BrevisProofApp {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
