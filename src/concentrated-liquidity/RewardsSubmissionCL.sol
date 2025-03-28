@@ -8,6 +8,7 @@ import "./AddRewards.sol";
 import "../BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";
 import "../access/Whitelist.sol";
+import "../rewards/RewardsMerkle.sol";
 
 struct AddrAmt {
     address token;
@@ -23,41 +24,12 @@ struct Config {
 }
 
 // submit campaign rewards on chain Y
-contract RewardsSubmission is AddRewards, Whitelist, BrevisProofApp {
+contract RewardsSubmissionCL is AddRewards, RewardsMerkle, BrevisProofApp {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
-
-    enum State {
-        EpochInit,
-        RewardsSubmission,
-        SubRootsGeneration,
-        TopRootGeneration
-    }
-
-    State public state;
-    uint64 public currEpoch;
-
     Config public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
-
-    // Storage for merkle roots generation
-    EnumerableSet.Bytes32Set subRoots;
-    uint256[] subRootUserIndexStart;
-    bytes32 public topRoot;
-
-    event SubRootLeafProcessed(
-        uint64 indexed epoch,
-        uint256 indexed subRootIndex,
-        uint256 indexed leafIndex,
-        address user,
-        uint256[] cumulativeRewards,
-        bytes32 leafHash
-    );
-    event SubRootGenerated(uint64 indexed epoch, uint256 indexed subRootIndex, bytes32 subRoot);
-    event AllSubRootsGenerated(uint64 indexed epoch);
-    event TopRootGenerated(uint64 indexed epoch, bytes32 topRoot);
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(Config calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
@@ -73,21 +45,6 @@ contract RewardsSubmission is AddRewards, Whitelist, BrevisProofApp {
         for (uint8 i = 0; i < vks.length; i++) {
             vkMap[i + 1] = vks[i];
         }
-    }
-
-    // ----------- state transition -----------
-    function startEpoch(uint64 epoch) external onlyWhitelisted {
-        require(state == State.EpochInit, "invalid state");
-        currEpoch = epoch;
-        state = State.RewardsSubmission;
-
-        subRoots.clear();
-    }
-
-    function startSubRootGen(uint64 epoch) external onlyWhitelisted {
-        require(state == State.RewardsSubmission, "invalid state");
-        currEpoch = epoch;
-        state = State.SubRootsGeneration;
     }
 
     // ----------- Rewards Submission -----------
@@ -121,99 +78,5 @@ contract RewardsSubmission is AddRewards, Whitelist, BrevisProofApp {
 
     function setVk(uint8 appid, bytes32 _vk) external onlyOwner {
         vkMap[appid] = _vk;
-    }
-
-    // ----------- Merkle Roots Generation -----------
-
-    /**
-     * @notice Generates and records a Merkle root for a subset of users up to `nLeaves`.
-     *         Should be called repeatedly until every user is covered in a subtree.
-     * @param epoch The epoch.
-     * @param nLeaves The maximal number of users to include in the current subtree.
-     */
-    function genSubRoot(uint64 epoch, uint256 nLeaves) external {
-        require(state == State.SubRootsGeneration, "invalid state");
-        require(epoch == currEpoch, "invalid epoch");
-
-        require(nLeaves <= 2 ** 32, "too many leaves");
-
-        uint256 subRootIndex = subRoots.length();
-        uint256 indexStart = 0;
-        if (subRootIndex == 0) {
-            delete subRootUserIndexStart;
-        } else {
-            indexStart = subRootUserIndexStart[subRootIndex - 1];
-        }
-
-        uint256 maxNLeaves = rewards.length() - indexStart;
-        if (nLeaves > maxNLeaves) {
-            nLeaves = maxNLeaves;
-        }
-        bytes32[] memory hashes = new bytes32[](nLeaves);
-        uint256 numTokens = tokens.length;
-        for (uint256 i = 0; i < nLeaves; i++) {
-            (address user, address[] memory rewardTokens, uint256[] memory rewardAmounts) =
-                getRewardUserTokenAmountsAt(indexStart + i, numTokens);
-            bytes32 leafHash = keccak256(abi.encodePacked(user, rewardTokens, rewardAmounts));
-            hashes[i] = leafHash;
-            emit SubRootLeafProcessed(epoch, subRootIndex, i, user, rewardAmounts, leafHash);
-        }
-        bytes32 subRoot = genMerkleRoot(hashes);
-        subRoots.add(subRoot);
-        emit SubRootGenerated(epoch, subRootIndex, subRoot);
-
-        if (nLeaves == maxNLeaves) {
-            state = State.TopRootGeneration;
-            emit AllSubRootsGenerated(epoch);
-        } else {
-            subRootUserIndexStart.push(indexStart + nLeaves);
-        }
-    }
-
-    /**
-     * @notice Generates and records the top Merkle tree root, using the subtree roots as leaves.
-     * @param epoch The epoch.
-     */
-    function genTopRoot(uint64 epoch) external {
-        require(state == State.SubRootsGeneration, "invalid state");
-        require(epoch == currEpoch, "invalid epoch");
-
-        topRoot = genMerkleRoot(subRoots.values());
-
-        currEpoch++;
-        state = State.EpochInit;
-    }
-
-    function genMerkleRoot(bytes32[] memory hashes) internal pure returns (bytes32) {
-        if (hashes.length == 0) {
-            return bytes32(0);
-        }
-        while (hashes.length > 1) {
-            bytes32[] memory nextHashes = new bytes32[]((hashes.length + 1) / 2);
-            uint256 i;
-            for (; i < hashes.length - 1; i += 2) {
-                nextHashes[i / 2] = Hashes.commutativeKeccak256(hashes[i], hashes[i + 1]);
-            }
-            if (i == hashes.length - 1) {
-                nextHashes[i / 2] = hashes[i];
-            }
-            hashes = nextHashes;
-        }
-        return hashes[0];
-    }
-
-    function getRewardUserTokenAmountsAt(uint256 index, uint256 numTokens)
-        internal
-        view
-        returns (address, address[] memory, uint256[] memory)
-    {
-        (address user, mapping(address => uint256) storage tokenAmountMap) = rewards.at(index);
-        address[] memory rewardTokens = new address[](numTokens);
-        uint256[] memory rewardAmounts = new uint256[](numTokens);
-        for (uint256 j = 0; j < numTokens; j++) {
-            rewardTokens[j] = tokens[j];
-            rewardAmounts[j] = tokenAmountMap[rewardTokens[j]];
-        }
-        return (user, rewardTokens, rewardAmounts);
     }
 }
