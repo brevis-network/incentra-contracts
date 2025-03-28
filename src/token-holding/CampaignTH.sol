@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "../BrevisProofApp.sol";
 import "../access/Whitelist.sol";
+import "../lib/EnumerableMap.sol";
 import "./RewardsTH.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
@@ -21,6 +22,8 @@ struct ConfigTH {
 }
 
 contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
+    using EnumerableMap for EnumerableMap.UserTokenAmountMap;
+
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     ConfigTH public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
@@ -32,7 +35,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             _tokens[i] = cfg.rewards[i].token;
         }
-        initTokens(_tokens);
+        _initTokens(_tokens);
         config = cfg;
         brevisProof = _brv;
         // 1: TotalFee 2: Rewards 3+: Others
@@ -64,7 +67,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
         _checkProof(_proof, _appOutput);
-        addRewards(_appOutput[1:]);
+        _addRewards(_appOutput[1:]);
     }
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
@@ -81,7 +84,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
         ConfigTH memory cfg = config;
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
-            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards[earner][cfg.rewards[i].token]});
+            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards.get(earner, cfg.rewards[i].token)});
         }
         return ret;
     }
@@ -91,7 +94,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
-            uint256 tosend = rewards[earner][erc20] - claimed[earner][erc20];
+            uint256 tosend = rewards.get(earner, erc20) - claimed[earner][erc20];
             ret[i] = AddrAmt({token: erc20, amount: tosend});
         }
         return ret;

@@ -9,8 +9,6 @@ import "../lib/EnumerableMap.sol";
 abstract contract RewardsStorage {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    event RewardsAdded(address indexed user, uint256[] newRewards);
-
     address[] public tokens; // addr list of reward tokens
     // user -> token -> cumulative rewards
     EnumerableMap.UserTokenAmountMap internal rewards;
