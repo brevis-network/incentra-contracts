@@ -11,8 +11,6 @@ import "./TotalFee.sol";
 abstract contract AddRewards is RewardsStorage, TotalFee {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    event RewardsAdded(address indexed user, uint256[] newRewards);
-
     // parse circuit output, check and add new reward to total
     // epoch, totalFee0, totalFee1, [usr,amt1,amt2..]
     function _addRewards(bytes calldata raw, bool enumerable) internal {

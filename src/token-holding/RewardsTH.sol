@@ -10,8 +10,6 @@ import "../rewards/same-chain/RewardsClaim.sol";
 abstract contract RewardsTH is RewardsStorage, RewardsClaim {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    event RewardsAdded(address indexed user, uint256[] newRewards);
-
     // parse circuit output, check and add new reward to total
     // epoch, [usr,amt1,amt2..]
     function _addRewards(bytes calldata raw) internal {

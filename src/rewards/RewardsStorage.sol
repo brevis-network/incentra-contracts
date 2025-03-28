@@ -22,6 +22,8 @@ abstract contract RewardsStorage {
     // indirect contract -> user -> last attested epoch to avoid replay
     mapping(address => mapping(address => uint32)) public indirectEpoch;
 
+    event RewardsAdded(address indexed user, uint256[] newRewards);
+
     function _initTokens(address[] memory _tokens) internal {
         for (uint256 i = 0; i < _tokens.length; i += 1) {
             tokens.push(_tokens[i]);
