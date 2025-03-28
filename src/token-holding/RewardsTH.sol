@@ -13,7 +13,7 @@ abstract contract RewardsTH is RewardsStorage, RewardsClaim {
     event RewardsAdded(address indexed user, uint256[] newRewards);
 
     // parse circuit output, check and add new reward to total
-    // epoch, totalFee0, totalFee1, [usr,amt1,amt2..]
+    // epoch, [usr,amt1,amt2..]
     function _addRewards(bytes calldata raw) internal {
         uint32 epoch = uint32(bytes4(raw[0:4]));
         uint256 numTokens = tokens.length;

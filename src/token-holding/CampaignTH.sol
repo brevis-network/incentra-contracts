@@ -13,7 +13,7 @@ struct AddrAmt {
     uint256 amount;
 }
 
-struct ConfigTH {
+struct Config {
     address creator;
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
@@ -25,11 +25,11 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
-    ConfigTH public config;
+    Config public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
-    function init(ConfigTH calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
+    function init(Config calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
         initOwner(owner);
         address[] memory _tokens = new address[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
@@ -46,7 +46,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
 
     // after grace period, refund all remaining balance to creator
     function refund() external {
-        ConfigTH memory cfg = config;
+        Config memory cfg = config;
         require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
@@ -81,7 +81,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
 
     // ===== view =====
     function viewTotalRewards(address earner) external view returns (AddrAmt[] memory) {
-        ConfigTH memory cfg = config;
+        Config memory cfg = config;
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards.get(earner, cfg.rewards[i].token)});
@@ -90,7 +90,7 @@ contract CampaignTH is BrevisProofApp, Whitelist, RewardsTH {
     }
 
     function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
-        ConfigTH memory cfg = config;
+        Config memory cfg = config;
         AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
