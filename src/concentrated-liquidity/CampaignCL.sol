@@ -4,7 +4,8 @@ pragma solidity ^0.8.20;
 import "../BrevisProofApp.sol";
 import "../access/Whitelist.sol";
 import "../lib/EnumerableMap.sol";
-import "./Rewards.sol";
+import "../rewards/same-chain/RewardsClaim.sol";
+import "./AddRewards.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
@@ -21,7 +22,7 @@ struct Config {
     address pooladdr; // which pool this campaign is for
 }
 
-contract Campaign is BrevisProofApp, Whitelist, Rewards {
+contract Campaign is BrevisProofApp, Whitelist, AddRewards, RewardsClaim {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end

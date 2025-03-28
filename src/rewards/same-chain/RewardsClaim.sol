@@ -3,16 +3,20 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-import "./AddRewards.sol";
-import "../lib/EnumerableMap.sol";
+import "../RewardsStorage.sol";
+import "../../lib/EnumerableMap.sol";
 
-abstract contract Rewards is AddRewards {
+// claim campaign rewards on chain X
+abstract contract RewardsClaim is RewardsStorage {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
-
-    event RewardsClaimed(address indexed user, uint256[] claimedRewards);
 
     // user -> token -> claimed amount
     mapping(address => mapping(address => uint256)) public claimed;
+
+    // token -> total claimed amount
+    mapping(address => uint256) public tokenClaimedRewards;
+
+    event RewardsClaimed(address indexed user, uint256[] claimedRewards);
 
     function _claim(address earner, address to) internal {
         uint256[] memory claimedRewards = new uint256[](tokens.length);

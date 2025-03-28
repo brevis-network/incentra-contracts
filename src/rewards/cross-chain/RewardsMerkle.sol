@@ -4,9 +4,9 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
-import "../access/Whitelist.sol";
-import "../lib/EnumerableMap.sol";
-import "./RewardsStorage.sol";
+import "../../access/Whitelist.sol";
+import "../../lib/EnumerableMap.sol";
+import "../RewardsStorage.sol";
 
 // generate campaign rewards merkle root and proof on chain Y
 abstract contract RewardsMerkle is RewardsStorage, Whitelist {

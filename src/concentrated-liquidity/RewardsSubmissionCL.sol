@@ -8,7 +8,7 @@ import "./AddRewards.sol";
 import "../BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";
 import "../access/Whitelist.sol";
-import "../rewards/RewardsMerkle.sol";
+import "../rewards/cross-chain/RewardsMerkle.sol";
 
 struct AddrAmt {
     address token;

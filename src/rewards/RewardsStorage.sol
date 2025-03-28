@@ -17,8 +17,6 @@ abstract contract RewardsStorage {
 
     // token -> total rewards
     mapping(address => uint256) public tokenCumulativeRewards;
-    // token -> total claimed amount
-    mapping(address => uint256) public tokenClaimedRewards;
 
     // user -> last attested epoch
     mapping(address => uint32) public lastEpoch;
