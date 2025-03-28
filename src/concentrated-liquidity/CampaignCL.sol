@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../BrevisProofApp.sol";
-import "../Whitelist.sol";
+import "../access/Whitelist.sol";
 import "../lib/EnumerableMap.sol";
 import "./Rewards.sol";
 

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../BrevisProofApp.sol";
-import "../Whitelist.sol";
+import "../access/Whitelist.sol";
 import "./RewardsTH.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";

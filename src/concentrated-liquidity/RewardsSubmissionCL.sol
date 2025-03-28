@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
 import "./AddRewards.sol";
-import "../Whitelist.sol";
 import "../BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";
+import "../access/Whitelist.sol";
 
 struct AddrAmt {
     address token;
