@@ -3,10 +3,15 @@ pragma solidity ^0.8.20;
 
 import "./BrevisProofApp.sol";
 import "./Whitelist.sol";
-import "./lib/EnumerableMap.sol";
 import "./Rewards.sol";
+import "./lib/EnumerableMap.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
+
+struct AddrAmt {
+    address token;
+    uint256 amount;
+}
 
 struct Config {
     address creator;

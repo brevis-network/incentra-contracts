@@ -6,15 +6,10 @@ import "./lib/EnumerableMap.sol";
 import "./TotalFee.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-struct AddrAmt {
-    address token;
-    uint256 amount;
-}
-
 abstract contract AddRewards is TotalFee {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    event RewardsAdded(address indexed user, AddrAmt[] newRewards);
+    event RewardsAdded(address indexed user, uint256[] newRewards);
 
     address[] public tokens; // addr list of reward tokens
     // user -> token -> cumulative rewards
@@ -55,14 +50,13 @@ abstract contract AddRewards is TotalFee {
             }
             require(epoch > lastEpoch[earner], "invalid epoch");
             lastEpoch[earner] = epoch;
-            AddrAmt[] memory newRewards = new AddrAmt[](numTokens);
+            uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 uint256 currentAmount = rewards.get(earner, tokens[i]);
                 rewards.set(earner, tokens[i], currentAmount + amount, enumerable);
                 tokenCumulativeRewards[tokens[i]] += amount;
-                newRewards[i].token = tokens[i];
-                newRewards[i].amount = amount;
+                newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);
         }
@@ -86,14 +80,13 @@ abstract contract AddRewards is TotalFee {
                 // update lastEpoch to enforce indirect must be submitted after main
                 lastEpoch[earner] = epoch;
             }
-            AddrAmt[] memory newRewards = new AddrAmt[](numTokens);
+            uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 uint256 currentAmount = rewards.get(earner, tokens[i]);
                 rewards.set(earner, tokens[i], currentAmount + amount, enumerable);
                 tokenCumulativeRewards[tokens[i]] += amount;
-                newRewards[i].token = tokens[i];
-                newRewards[i].amount = amount;
+                newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);
         }

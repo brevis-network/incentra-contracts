@@ -8,13 +8,13 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 abstract contract Rewards is AddRewards {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    event RewardsClaimed(address indexed user, AddrAmt[] claimedRewards);
+    event RewardsClaimed(address indexed user, uint256[] claimedRewards);
 
     // user -> token -> claimed amount
     mapping(address => mapping(address => uint256)) public claimed;
 
     function _claim(address earner, address to) internal {
-        AddrAmt[] memory claimedRewards = new AddrAmt[](tokens.length);
+        uint256[] memory claimedRewards = new uint256[](tokens.length);
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             address erc20 = tokens[i];
@@ -26,8 +26,7 @@ abstract contract Rewards is AddRewards {
                 tokenClaimedRewards[erc20] += tosend;
                 hasUnclaimed = true;
             }
-            claimedRewards[i].token = erc20;
-            claimedRewards[i].amount = tosend;
+            claimedRewards[i] = tosend;
         }
         require(hasUnclaimed, "no unclaimed rewards");
         emit RewardsClaimed(earner, claimedRewards);
