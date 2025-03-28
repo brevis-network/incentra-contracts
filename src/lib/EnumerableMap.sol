@@ -23,6 +23,15 @@ library EnumerableMap {
         }
     }
 
+    function add(UserTokenAmountMap storage map, address user, address token, uint256 amount, bool enumerable)
+        internal
+    {
+        map._values[user][token] += amount;
+        if (enumerable) {
+            map._keys.add(user);
+        }
+    }
+
     function contains(UserTokenAmountMap storage map, address user) internal view returns (bool) {
         return map._keys.contains(user);
     }

@@ -26,8 +26,7 @@ abstract contract RewardsTH is RewardsStorage, RewardsClaim {
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
-                uint256 currentAmount = rewards.get(earner, tokens[i]);
-                rewards.set(earner, tokens[i], currentAmount + amount, false);
+                rewards.add(earner, tokens[i], amount, false);
                 newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);

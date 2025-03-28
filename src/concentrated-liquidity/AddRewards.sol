@@ -32,8 +32,7 @@ abstract contract AddRewards is RewardsStorage, TotalFee {
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
-                uint256 currentAmount = rewards.get(earner, tokens[i]);
-                rewards.set(earner, tokens[i], currentAmount + amount, enumerable);
+                rewards.add(earner, tokens[i], amount, enumerable);
                 tokenCumulativeRewards[tokens[i]] += amount;
                 newRewards[i] = amount;
             }
@@ -62,8 +61,7 @@ abstract contract AddRewards is RewardsStorage, TotalFee {
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
-                uint256 currentAmount = rewards.get(earner, tokens[i]);
-                rewards.set(earner, tokens[i], currentAmount + amount, enumerable);
+                rewards.add(earner, tokens[i], amount, enumerable);
                 tokenCumulativeRewards[tokens[i]] += amount;
                 newRewards[i] = amount;
             }
