@@ -5,7 +5,7 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../lib/EnumerableMap.sol";
-import "../TotalFee.sol";
+import "./TotalFee.sol";
 
 abstract contract AddRewards is TotalFee {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
