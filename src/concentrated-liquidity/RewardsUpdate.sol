@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-
 import "../BrevisProofApp.sol";
 import "../access/Whitelist.sol";
 import "../lib/EnumerableMap.sol";
@@ -26,12 +23,12 @@ abstract contract RewardsUpdate is BrevisProofApp, TotalFee, RewardsStorage, Whi
 
     function _initConfig(Config calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
         brevisProof = _breivisProof;
+        config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             _tokens[i] = cfg.rewards[i].token;
         }
         _initTokens(_tokens);
-        config = cfg;
         // 1: TotalFee 2: Rewards 3+: Others
         for (uint8 i = 0; i < vks.length; i++) {
             vkMap[i + 1] = vks[i];

@@ -12,7 +12,7 @@ Main contracts: `CampaignXX.sol`, examples:
 
 To reduce gas cost of campaign on an expensive chain (e.g., Ethereum), submit zk attested rewards on another chain (e.g., Arbitrum), then bridge the merkle root of all rewards back to the campaign chain.
 
-- Rewards submission contract: `RewardsSubmissionXX.sol`, e.g., `RewardsSubmissionCL.sol`
+- Rewards submission contract: `RewardsSubmissionXX.sol`, e.g., `RewardsSubmissionCL.sol`, `RewardsSubmissionTH.sol`
 - Rewards claim contract: [`RewardsClaim.sol`](./src/rewards/cross-chain/RewardsClaim.sol)
 
 ## Concentrated Liquidity
