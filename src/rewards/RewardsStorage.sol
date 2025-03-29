@@ -6,6 +6,11 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../lib/EnumerableMap.sol";
 
+struct AddrAmt {
+    address token;
+    uint256 amount;
+}
+
 abstract contract RewardsStorage {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
@@ -36,5 +41,13 @@ abstract contract RewardsStorage {
 
     function getRewardAmount(address user, address token) public view returns (uint256) {
         return rewards.get(user, token);
+    }
+
+    function viewTotalRewards(address earner) external view returns (AddrAmt[] memory) {
+        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            ret[i] = AddrAmt({token: tokens[i], amount: rewards.get(earner, tokens[i])});
+        }
+        return ret;
     }
 }

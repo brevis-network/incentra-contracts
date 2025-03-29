@@ -35,4 +35,14 @@ abstract contract RewardsClaim is RewardsStorage {
         require(hasUnclaimed, "no unclaimed rewards");
         emit RewardsClaimed(earner, claimedRewards);
     }
+
+    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address erc20 = tokens[i];
+            uint256 tosend = rewards.get(earner, erc20) - claimed[earner][erc20];
+            ret[i] = AddrAmt({token: erc20, amount: tosend});
+        }
+        return ret;
+    }
 }

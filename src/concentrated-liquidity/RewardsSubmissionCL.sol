@@ -10,11 +10,6 @@ import "../lib/EnumerableMap.sol";
 import "../access/Whitelist.sol";
 import "../rewards/cross-chain/RewardsMerkle.sol";
 
-struct AddrAmt {
-    address token;
-    uint256 amount;
-}
-
 struct Config {
     address creator;
     uint64 startTime;

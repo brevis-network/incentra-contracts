@@ -9,11 +9,6 @@ import "./AddRewards.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-struct AddrAmt {
-    address token;
-    uint256 amount;
-}
-
 struct Config {
     address creator;
     uint64 startTime;
@@ -92,26 +87,5 @@ contract Campaign is BrevisProofApp, Whitelist, AddRewards, RewardsClaim {
 
     function setVk(uint8 appid, bytes32 _vk) external onlyOwner {
         vkMap[appid] = _vk;
-    }
-
-    // ===== view =====
-    function viewTotalRewards(address earner) external view returns (AddrAmt[] memory) {
-        Config memory cfg = config;
-        AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
-        for (uint256 i = 0; i < cfg.rewards.length; i++) {
-            ret[i] = AddrAmt({token: cfg.rewards[i].token, amount: rewards.get(earner, cfg.rewards[i].token)});
-        }
-        return ret;
-    }
-
-    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
-        Config memory cfg = config;
-        AddrAmt[] memory ret = new AddrAmt[](cfg.rewards.length);
-        for (uint256 i = 0; i < cfg.rewards.length; i++) {
-            address erc20 = cfg.rewards[i].token;
-            uint256 tosend = rewards.get(earner, erc20) - claimed[earner][erc20];
-            ret[i] = AddrAmt({token: erc20, amount: tosend});
-        }
-        return ret;
     }
 }

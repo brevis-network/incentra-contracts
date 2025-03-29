@@ -128,4 +128,13 @@ contract RewardsClaim is Whitelist {
         }
         return hash == root;
     }
+
+    function viewClaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        address[] memory tokens = getTokens();
+        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            ret[i] = AddrAmt({token: tokens[i], amount: claimed[earner][tokens[i]]});
+        }
+        return ret;
+    }
 }
