@@ -30,6 +30,10 @@ abstract contract RewardsStorage {
         }
     }
 
+    function getTokens() public view returns (address[] memory) {
+        return tokens;
+    }
+
     function getRewardAmount(address user, address token) public view returns (uint256) {
         return rewards.get(user, token);
     }

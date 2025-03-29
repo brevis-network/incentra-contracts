@@ -57,6 +57,8 @@ abstract contract RewardsMerkle is RewardsStorage, Whitelist {
 
     // ----------- Merkle Roots Generation -----------
 
+    // ----------- External Functions -----------
+
     /**
      * @notice Generates and records a Merkle root for a subset of users up to `nLeaves`.
      *         Should be called repeatedly until every user is covered in a subtree.
@@ -82,10 +84,9 @@ abstract contract RewardsMerkle is RewardsStorage, Whitelist {
             nLeaves = maxNLeaves;
         }
         bytes32[] memory hashes = new bytes32[](nLeaves);
-        uint256 numTokens = tokens.length;
+        address[] memory rewardTokens = getTokens();
         for (uint256 i = 0; i < nLeaves; i++) {
-            (address user, address[] memory rewardTokens, uint256[] memory rewardAmounts) =
-                getRewardUserTokenAmountsAt(indexStart + i, numTokens);
+            (address user, uint256[] memory rewardAmounts) = rewards.getUserAmountsAt(indexStart + i, rewardTokens);
             bytes32 leafHash = keccak256(abi.encodePacked(user, rewardTokens, rewardAmounts));
             hashes[i] = leafHash;
             emit SubRootLeafProcessed(epoch, subRootIndex, i, user, rewardAmounts, leafHash);
@@ -116,7 +117,51 @@ abstract contract RewardsMerkle is RewardsStorage, Whitelist {
         state = State.EpochInit;
     }
 
-    function genMerkleRoot(bytes32[] memory hashes) internal pure returns (bytes32) {
+    function getMerkleProof(uint64 epoch, address user)
+        external
+        view
+        returns (uint256[] memory rewardAmounts, bytes32[] memory proof)
+    {
+        require(state == State.EpochInit, "invalid state");
+        require(epoch == currEpoch - 1, "invalid epoch");
+
+        address[] memory rewardTokens = getTokens();
+        rewardAmounts = rewards.getAmounts(user, rewardTokens);
+
+        uint256 userIndex = rewards._keys._inner._positions[bytes32(uint256(uint160(user)))] - 1;
+
+        uint256 subRootIndex;
+        while (subRootIndex < subRoots.length() - 1 && userIndex >= subRootUserIndexStart[subRootIndex]) {
+            ++subRootIndex;
+        }
+
+        uint256 indexStart = subRootIndex == 0 ? 0 : subRootUserIndexStart[subRootIndex - 1];
+        uint256 nLeaves = rewards.length() - indexStart;
+        if (subRootIndex < subRoots.length() - 1) {
+            nLeaves -= rewards.length() - subRootUserIndexStart[subRootIndex];
+        }
+
+        bytes32[] memory hashes = new bytes32[](nLeaves);
+        for (uint256 i = 0; i < hashes.length; i++) {
+            (address _user, uint256[] memory _rewardAmounts) = rewards.getUserAmountsAt(indexStart + i, rewardTokens);
+            hashes[i] = keccak256(abi.encodePacked(_user, rewardTokens, _rewardAmounts));
+        }
+        bytes32[] memory subProof = genMerkleProof(hashes, userIndex - indexStart);
+
+        bytes32[] memory topProof = genMerkleProof(subRoots.values(), subRootIndex);
+
+        proof = new bytes32[](subProof.length + topProof.length);
+        for (uint256 i = 0; i < subProof.length; i++) {
+            proof[i] = subProof[i];
+        }
+        for (uint256 i = 0; i < topProof.length; i++) {
+            proof[subProof.length + i] = topProof[i];
+        }
+    }
+
+    // ----------- Private Functions -----------
+
+    function genMerkleRoot(bytes32[] memory hashes) private pure returns (bytes32) {
         if (hashes.length == 0) {
             return bytes32(0);
         }
@@ -134,18 +179,30 @@ abstract contract RewardsMerkle is RewardsStorage, Whitelist {
         return hashes[0];
     }
 
-    function getRewardUserTokenAmountsAt(uint256 index, uint256 numTokens)
-        internal
-        view
-        returns (address, address[] memory, uint256[] memory)
-    {
-        (address user, mapping(address => uint256) storage tokenAmountMap) = rewards.at(index);
-        address[] memory rewardTokens = new address[](numTokens);
-        uint256[] memory rewardAmounts = new uint256[](numTokens);
-        for (uint256 j = 0; j < numTokens; j++) {
-            rewardTokens[j] = tokens[j];
-            rewardAmounts[j] = tokenAmountMap[rewardTokens[j]];
+    function genMerkleProof(bytes32[] memory hashes, uint256 path) private pure returns (bytes32[] memory proof) {
+        proof = new bytes32[](32);
+
+        uint256 length = 0;
+        while (hashes.length > 1) {
+            if (hashes.length % 2 == 0 || path < hashes.length - 1) {
+                proof[length] = hashes[path ^ 1];
+                ++length;
+            }
+            path >>= 1;
+
+            bytes32[] memory nextHashes = new bytes32[]((hashes.length + 1) / 2);
+            uint256 i;
+            for (; i < hashes.length - 1; i += 2) {
+                nextHashes[i / 2] = Hashes.commutativeKeccak256(hashes[i], hashes[i + 1]);
+            }
+            if (i == hashes.length - 1) {
+                nextHashes[i / 2] = hashes[i];
+            }
+            hashes = nextHashes;
         }
-        return (user, rewardTokens, rewardAmounts);
+
+        assembly ("memory-safe") {
+            mstore(proof, length)
+        }
     }
 }

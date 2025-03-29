@@ -53,4 +53,29 @@ library EnumerableMap {
         mapping(address => uint256) storage tokenAmountMap = map._values[user];
         return tokenAmountMap[token];
     }
+
+    function getAmounts(UserTokenAmountMap storage map, address user, address[] memory tokens)
+        internal
+        view
+        returns (uint256[] memory amounts)
+    {
+        mapping(address => uint256) storage tokenAmountMap = map._values[user];
+        amounts = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            amounts[i] = tokenAmountMap[tokens[i]];
+        }
+    }
+
+    function getUserAmountsAt(UserTokenAmountMap storage map, uint256 index, address[] memory rewardTokens)
+        internal
+        view
+        returns (address, uint256[] memory)
+    {
+        (address user, mapping(address => uint256) storage tokenAmountMap) = at(map, index);
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        for (uint256 j = 0; j < rewardTokens.length; j++) {
+            amounts[j] = tokenAmountMap[rewardTokens[j]];
+        }
+        return (user, amounts);
+    }
 }
