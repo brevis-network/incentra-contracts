@@ -1,5 +1,131 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
+
+import "../../access/Whitelist.sol";
+
+struct AddrAmt {
+    address token;
+    uint256 amount;
+}
+
+struct Config {
+    address creator;
+    uint64 startTime;
+    uint32 duration; // how many seconds this campaign is active, end after startTime+duration
+    AddrAmt[] rewards; // list of [reward token and total amount]
+}
+
 // claim campaign rewards on chain one chain, which was submitted on another chain
-contract RewardsClaim {}
+contract RewardsClaim is Whitelist {
+    uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
+    Config public config;
+
+    // user -> token -> claimed amount
+    mapping(address => mapping(address => uint256)) public claimed;
+    // token -> total claimed amount
+    mapping(address => uint256) public tokenClaimedRewards;
+
+    uint64 public epoch;
+    bytes32 public topRoot;
+
+    event TopRootUpdated(uint64 indexed epoch, bytes32 topRoot);
+    event RewardsClaimed(address indexed earner, uint256[] newAmount, uint256[] cumulativeAmounts);
+
+    function init(Config calldata cfg, address owner) external {
+        initOwner(owner);
+        config = cfg;
+    }
+
+    // after grace period, refund all remaining balance to creator
+    function refund() external {
+        Config memory cfg = config;
+        require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
+        for (uint256 i = 0; i < cfg.rewards.length; i++) {
+            address erc20 = cfg.rewards[i].token;
+            IERC20(erc20).transfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
+        }
+    }
+
+    // claim reward, send erc20 to earner
+    function claim(address earner, uint256[] memory cumulativeAmounts, uint64 _epoch, bytes32[] memory proof)
+        external
+    {
+        _claim(earner, earner, cumulativeAmounts, _epoch, proof);
+    }
+
+    // msg.sender is the earner
+    function claimWithRecipient(address to, uint256[] memory cumulativeAmounts, uint64 _epoch, bytes32[] memory proof)
+        external
+    {
+        _claim(msg.sender, to, cumulativeAmounts, _epoch, proof);
+    }
+
+    /**
+     * @notice Updates the epoch and top Merkle root info
+     * @param _epoch The epoch number.
+     * @param _topRoot The Merkle root for the top tree.
+     */
+    function updateRoot(uint64 _epoch, bytes32 _topRoot) external onlyWhitelisted {
+        epoch = _epoch;
+        topRoot = _topRoot;
+
+        emit TopRootUpdated(epoch, topRoot);
+    }
+
+    function getTokens() public view returns (address[] memory) {
+        address[] memory tokens = new address[](config.rewards.length);
+        for (uint256 i = 0; i < config.rewards.length; i++) {
+            tokens[i] = config.rewards[i].token;
+        }
+        return tokens;
+    }
+
+    /**
+     * @notice Claims rewards for a user using a combined sub tree + top tree Merkle proof.
+     * @param earner The user address.
+     * @param cumulativeAmounts The cumulative reward amount.
+     * @param proof The Merkle proof from the sub tree leaf node to the top tree root.
+     */
+    function _claim(
+        address earner,
+        address to,
+        uint256[] memory cumulativeAmounts,
+        uint64 _epoch,
+        bytes32[] memory proof
+    ) internal {
+        require(_epoch == epoch, "invalid epoch");
+
+        address[] memory tokens = getTokens();
+        bytes32 leafHash = keccak256(abi.encodePacked(earner, tokens, cumulativeAmounts));
+        require(verifyMerkleProof(proof, topRoot, leafHash), "verification failed");
+
+        uint256[] memory newAmount = new uint256[](tokens.length);
+        bool hasUnclaimed = false;
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address erc20 = tokens[i];
+            uint256 tosend = cumulativeAmounts[i] - claimed[earner][erc20];
+            claimed[earner][erc20] = cumulativeAmounts[i];
+            // send token
+            if (tosend > 0) {
+                IERC20(erc20).transfer(to, tosend);
+                tokenClaimedRewards[erc20] += tosend;
+                hasUnclaimed = true;
+            }
+            newAmount[i] = tosend;
+        }
+        require(hasUnclaimed, "no unclaimed rewards");
+        emit RewardsClaimed(earner, newAmount, cumulativeAmounts);
+    }
+
+    function verifyMerkleProof(bytes32[] memory proof, bytes32 root, bytes32 leafHash) private pure returns (bool) {
+        bytes32 hash = leafHash;
+        for (uint256 i = 0; i < proof.length; i++) {
+            hash = Hashes.commutativeKeccak256(hash, proof[i]);
+        }
+        return hash == root;
+    }
+}

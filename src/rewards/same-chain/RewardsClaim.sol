@@ -12,11 +12,10 @@ abstract contract RewardsClaim is RewardsStorage {
 
     // user -> token -> claimed amount
     mapping(address => mapping(address => uint256)) public claimed;
-
     // token -> total claimed amount
     mapping(address => uint256) public tokenClaimedRewards;
 
-    event RewardsClaimed(address indexed user, uint256[] claimedRewards);
+    event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
 
     function _claim(address earner, address to) internal {
         uint256[] memory claimedRewards = new uint256[](tokens.length);
