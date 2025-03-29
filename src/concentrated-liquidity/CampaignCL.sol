@@ -41,15 +41,18 @@ contract Campaign is BrevisProofApp, RewardsUpdate, RewardsClaim {
     }
 
     // update rewards map w/ zk proof
-    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 index) external onlyWhitelisted {
-        _updateRewards(_proof, _appOutput, false, index);
-    }
-
-    // update rewards map w/ zk proof
-    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 index)
+    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
         external
         onlyWhitelisted
     {
-        _updateIndirectRewards(_proof, _appOutput, false, index);
+        _updateRewards(_proof, _appOutput, false, batchIndex);
+    }
+
+    // update rewards map w/ zk proof
+    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
+        external
+        onlyWhitelisted
+    {
+        _updateIndirectRewards(_proof, _appOutput, false, batchIndex);
     }
 }

@@ -15,15 +15,18 @@ contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdate, RewardsMerkle {
     }
 
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 index) external onlyWhitelisted {
-        _updateRewards(_proof, _appOutput, true, index);
-    }
-
-    // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 index)
+    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
         external
         onlyWhitelisted
     {
-        _updateIndirectRewards(_proof, _appOutput, true, index);
+        _updateRewards(_proof, _appOutput, true, batchIndex);
+    }
+
+    // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
+    function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
+        external
+        onlyWhitelisted
+    {
+        _updateIndirectRewards(_proof, _appOutput, true, batchIndex);
     }
 }
