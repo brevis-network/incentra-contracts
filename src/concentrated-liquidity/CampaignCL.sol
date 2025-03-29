@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+
 import "../BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";
 import "../rewards/same-chain/RewardsClaim.sol";
 import "./RewardsUpdate.sol";
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-
+// submit and claim campaign rewards on a same chain
 contract Campaign is BrevisProofApp, RewardsUpdate, RewardsClaim {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
