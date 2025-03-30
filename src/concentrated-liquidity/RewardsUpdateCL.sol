@@ -7,7 +7,7 @@ import "../lib/EnumerableMap.sol";
 import "../rewards/RewardsStorage.sol";
 import "./TotalFee.sol";
 
-struct Config {
+struct ConfigCL {
     address creator;
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
@@ -15,15 +15,15 @@ struct Config {
     address pooladdr; // which pool this campaign is for
 }
 
-abstract contract RewardsUpdate is BrevisProofApp, TotalFee, RewardsStorage, Whitelist {
+abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, Whitelist {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    Config public config;
+    ConfigCL public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
 
-    function _initConfig(Config calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
+    function _initConfig(ConfigCL calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
         brevisProof = _breivisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);

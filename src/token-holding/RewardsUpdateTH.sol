@@ -6,7 +6,7 @@ import "../access/Whitelist.sol";
 import "../lib/EnumerableMap.sol";
 import "../rewards/RewardsStorage.sol";
 
-struct Config {
+struct ConfigTH {
     address creator;
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
@@ -14,15 +14,15 @@ struct Config {
     address erc20; // which erc20 is used for token holding
 }
 
-abstract contract RewardsUpdate is BrevisProofApp, RewardsStorage, Whitelist {
+abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Whitelist {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    Config public config;
+    ConfigTH public config;
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
 
-    function _initConfig(Config calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
+    function _initConfig(ConfigTH calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
         brevisProof = _breivisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);

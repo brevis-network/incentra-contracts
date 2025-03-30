@@ -4,12 +4,12 @@ pragma solidity ^0.8.20;
 import "../BrevisProofApp.sol";
 import "../access/Whitelist.sol";
 import "../rewards/cross-chain/RewardsMerkle.sol";
-import "./RewardsUpdate.sol";
+import "./RewardsUpdateCL.sol";
 
 // submit campaign rewards on one chain, which will be claimed on another chain
-contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdate, RewardsMerkle {
+contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdateCL, RewardsMerkle {
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
-    function init(Config calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
+    function init(ConfigCL calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
         initOwner(owner);
         _initConfig(cfg, _brv, vks);
     }

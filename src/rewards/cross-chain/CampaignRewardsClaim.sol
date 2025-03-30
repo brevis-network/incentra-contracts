@@ -19,7 +19,7 @@ struct Config {
 }
 
 // claim campaign rewards on chain one chain, which was submitted on another chain
-contract RewardsClaim is Whitelist {
+contract CampaignRewardsClaim is Whitelist {
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
 
