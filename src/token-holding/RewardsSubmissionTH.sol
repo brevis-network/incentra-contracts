@@ -7,7 +7,7 @@ import "../rewards/cross-chain/RewardsMerkle.sol";
 import "./RewardsUpdate.sol";
 
 // submit campaign rewards on one chain, which will be claimed on another chain
-contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdate, RewardsMerkle {
+contract RewardsSubmissionTH is BrevisProofApp, RewardsUpdate, RewardsMerkle {
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(Config calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
         initOwner(owner);

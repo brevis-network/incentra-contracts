@@ -9,7 +9,7 @@ import "../rewards/same-chain/RewardsClaim.sol";
 import "./RewardsUpdate.sol";
 
 // submit and claim campaign rewards on a same chain
-contract Campaign is BrevisProofApp, RewardsUpdate, RewardsClaim {
+contract CampaignCL is BrevisProofApp, RewardsUpdate, RewardsClaim {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
