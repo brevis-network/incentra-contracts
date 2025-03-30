@@ -5,15 +5,17 @@
 ### Same-chain reward submission and claim
 
 Main contracts: `CampaignXX.sol`, examples:
-- `CampaignCL.sol`: concentrated liquidity campaign
-- `CampaignTH.sol`: token holding campaign
+- [`CampaignCL.sol`](./src/concentrated-liquidity/CampaignCL.sol): concentrated liquidity campaign
+- [`CampaignTH.sol`](./src/token-holding/CampaignTH.sol): token holding campaign
 
 ### Cross-chain reward submission and claim
 
 To reduce gas cost of campaign on an expensive chain (e.g., Ethereum), submit zk attested rewards on another chain (e.g., Arbitrum), then bridge the merkle root of all rewards back to the campaign chain.
 
-- Rewards submission contract: `RewardsSubmissionXX.sol`, e.g., `RewardsSubmissionCL.sol`, `RewardsSubmissionTH.sol`
-- Rewards claim contract: [`RewardsClaim.sol`](./src/rewards/cross-chain/RewardsClaim.sol)
+- Rewards submission contract: `RewardsSubmissionXX.sol`
+    - [`RewardsSubmissionCL.sol`](./src/concentrated-liquidity/RewardsSubmissionCL.sol)
+    - [`RewardsSubmissionTH.sol`](./src/token-holding/RewardsSubmissionTH.sol)
+- Rewards claim contract: [`CampaignRewardsClaim.sol`](./src/rewards/cross-chain/CampaignRewardsClaim.sol)
 
 ## Concentrated Liquidity
 - CampaignCL: main contract, accept zk attested rewards and user claim, inherits Rewards which inherits TotalFee
