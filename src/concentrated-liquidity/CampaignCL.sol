@@ -15,9 +15,16 @@ contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
-    function init(ConfigCL calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
+    function init(
+        ConfigCL calldata cfg,
+        IBrevisProof _brv,
+        address owner,
+        bytes32[] calldata vks,
+        address reward_updater
+    ) external {
         initOwner(owner);
         _initConfig(cfg, _brv, vks);
+        grantRole(REWARD_UPDATER_ROLE, reward_updater);
     }
 
     // after grace period, refund all remaining balance to creator
@@ -43,7 +50,7 @@ contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
     // update rewards map w/ zk proof
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
         external
-        onlyWhitelisted
+        onlyRole(REWARD_UPDATER_ROLE)
     {
         _updateRewards(_proof, _appOutput, false, batchIndex);
     }
@@ -51,7 +58,7 @@ contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
     // update rewards map w/ zk proof
     function updateIndirectRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
         external
-        onlyWhitelisted
+        onlyRole(REWARD_UPDATER_ROLE)
     {
         _updateIndirectRewards(_proof, _appOutput, false, batchIndex);
     }

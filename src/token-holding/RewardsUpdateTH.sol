@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../BrevisProofApp.sol";
-import "../access/Whitelist.sol";
+import "../access/Ownable.sol";
 import "../lib/EnumerableMap.sol";
 import "../rewards/RewardsStorage.sol";
 
@@ -14,7 +14,7 @@ struct ConfigTH {
     address erc20; // which erc20 is used for token holding
 }
 
-abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Whitelist {
+abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     ConfigTH public config;

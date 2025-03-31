@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
-import "../../access/Whitelist.sol";
+import "../../access/AccessControl.sol";
 
 struct AddrAmt {
     address token;
@@ -19,7 +19,10 @@ struct Config {
 }
 
 // claim campaign rewards on chain one chain, which was submitted on another chain
-contract CampaignRewardsClaim is Whitelist {
+contract CampaignRewardsClaim is AccessControl {
+    // e844ed9e40aeb388cb97d2ef796e81de635718f440751efb46753791698f6bde
+    bytes32 public constant ROOT_UPDATER_ROLE = keccak256("root_updater");
+
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
 
@@ -34,8 +37,9 @@ contract CampaignRewardsClaim is Whitelist {
     event TopRootUpdated(uint64 indexed epoch, bytes32 topRoot);
     event RewardsClaimed(address indexed earner, uint256[] newAmount, uint256[] cumulativeAmounts);
 
-    function init(Config calldata cfg, address owner) external {
+    function init(Config calldata cfg, address owner, address root_updater) external {
         initOwner(owner);
+        grantRole(ROOT_UPDATER_ROLE, root_updater);
         config = cfg;
     }
 
@@ -68,7 +72,7 @@ contract CampaignRewardsClaim is Whitelist {
      * @param _epoch The epoch number.
      * @param _topRoot The Merkle root for the top tree.
      */
-    function updateRoot(uint64 _epoch, bytes32 _topRoot) external onlyWhitelisted {
+    function updateRoot(uint64 _epoch, bytes32 _topRoot) external onlyRole(ROOT_UPDATER_ROLE) {
         epoch = _epoch;
         topRoot = _topRoot;
 
@@ -83,6 +87,17 @@ contract CampaignRewardsClaim is Whitelist {
         return tokens;
     }
 
+    function viewClaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        address[] memory tokens = getTokens();
+        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            ret[i] = AddrAmt({token: tokens[i], amount: claimed[earner][tokens[i]]});
+        }
+        return ret;
+    }
+
+    // ------------------------------------
+    // ----- internal and private functions -----
     /**
      * @notice Claims rewards for a user using a combined sub tree + top tree Merkle proof.
      * @param earner The user address.
@@ -127,14 +142,5 @@ contract CampaignRewardsClaim is Whitelist {
             hash = Hashes.commutativeKeccak256(hash, proof[i]);
         }
         return hash == root;
-    }
-
-    function viewClaimedRewards(address earner) external view returns (AddrAmt[] memory) {
-        address[] memory tokens = getTokens();
-        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            ret[i] = AddrAmt({token: tokens[i], amount: claimed[earner][tokens[i]]});
-        }
-        return ret;
     }
 }
