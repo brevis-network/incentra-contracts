@@ -14,6 +14,9 @@ struct AddrAmt {
 abstract contract RewardsStorage {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
+    // 82531167a8e1b9df58acc5f105c04f72009b9ff406bf7d722b527a2f45d626ae
+    bytes32 public constant REWARD_UPDATER_ROLE = keccak256("reward_updater");
+
     address[] public tokens; // addr list of reward tokens
     // user -> token -> cumulative rewards
     EnumerableMap.UserTokenAmountMap internal rewards;

@@ -4,12 +4,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
-import "../../access/Whitelist.sol";
+import "../../access/AccessControl.sol";
 import "../../lib/EnumerableMap.sol";
 import "../RewardsStorage.sol";
 
 // generate campaign rewards merkle root and proof on one chain, which will be claimed on another chain
-abstract contract RewardsMerkle is RewardsStorage, Whitelist {
+abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
@@ -41,7 +41,7 @@ abstract contract RewardsMerkle is RewardsStorage, Whitelist {
     event TopRootGenerated(uint64 indexed epoch, bytes32 topRoot);
 
     // ----------- state transition -----------
-    function startEpoch(uint64 epoch) external onlyWhitelisted {
+    function startEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.EpochInit, "invalid state");
         currEpoch = epoch;
         state = State.RewardsSubmission;
@@ -49,7 +49,7 @@ abstract contract RewardsMerkle is RewardsStorage, Whitelist {
         subRoots.clear();
     }
 
-    function startSubRootGen(uint64 epoch) external onlyWhitelisted {
+    function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
         currEpoch = epoch;
         state = State.SubRootsGeneration;

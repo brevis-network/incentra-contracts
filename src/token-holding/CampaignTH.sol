@@ -6,17 +6,25 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import "../BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";
 import "../rewards/same-chain/RewardsClaim.sol";
+import "../access/AccessControl.sol";
 import "./RewardsUpdateTH.sol";
 
-contract CampaignTH is BrevisProofApp, RewardsUpdateTH, RewardsClaim {
+contract CampaignTH is BrevisProofApp, RewardsUpdateTH, RewardsClaim, AccessControl {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
 
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
-    function init(ConfigTH calldata cfg, IBrevisProof _brv, address owner, bytes32[] calldata vks) external {
+    function init(
+        ConfigTH calldata cfg,
+        IBrevisProof _brv,
+        address owner,
+        bytes32[] calldata vks,
+        address reward_updater
+    ) external {
         initOwner(owner);
         _initConfig(cfg, _brv, vks);
+        grantRole(REWARD_UPDATER_ROLE, reward_updater);
     }
 
     // after grace period, refund all remaining balance to creator
@@ -42,7 +50,7 @@ contract CampaignTH is BrevisProofApp, RewardsUpdateTH, RewardsClaim {
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
         external
-        onlyWhitelisted
+        onlyRole(REWARD_UPDATER_ROLE)
     {
         _updateRewards(_proof, _appOutput, false, batchIndex);
     }

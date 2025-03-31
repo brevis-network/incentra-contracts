@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../BrevisProofApp.sol";
-import "../access/Whitelist.sol";
+import "../access/AccessControl.sol";
 import "../lib/EnumerableMap.sol";
 import "../rewards/RewardsStorage.sol";
 import "./TotalFee.sol";
@@ -15,7 +15,7 @@ struct ConfigCL {
     address pooladdr; // which pool this campaign is for
 }
 
-abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, Whitelist {
+abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, AccessControl {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     ConfigCL public config;
@@ -40,7 +40,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, W
     // ----- external functions -----
 
     // _appOutput is 1(totalfee app id), pooladdr, epoch, t0, t1
-    function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external onlyWhitelisted {
+    function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external onlyRole(REWARD_UPDATER_ROLE) {
         _checkProof(_proof, _appOutput);
         address pooladdr = address(bytes20(_appOutput[1:21]));
         require(pooladdr == config.pooladdr, "mismatch pool addr");
