@@ -96,12 +96,14 @@ contract CampaignRewardsClaim is AccessControl {
         return ret;
     }
 
-    // ------------------------------------
-    // ----- internal and private functions -----
+    // ------------------------------------------
+    // -----------  private functions -----------
     /**
      * @notice Claims rewards for a user using a combined sub tree + top tree Merkle proof.
-     * @param earner The user address.
+     * @param earner The earner address.
+     * @param to Reward recipient address.
      * @param cumulativeAmounts The cumulative reward amount.
+     * @param _epoch The epoch of the proof
      * @param proof The Merkle proof from the sub tree leaf node to the top tree root.
      */
     function _claim(
@@ -110,16 +112,14 @@ contract CampaignRewardsClaim is AccessControl {
         uint256[] memory cumulativeAmounts,
         uint64 _epoch,
         bytes32[] memory proof
-    ) internal {
+    ) private {
         require(_epoch == epoch, "invalid epoch");
-
         address[] memory tokens = getTokens();
         bytes32 leafHash = keccak256(abi.encodePacked(earner, tokens, cumulativeAmounts));
         require(verifyMerkleProof(proof, topRoot, leafHash), "verification failed");
 
         uint256[] memory newAmount = new uint256[](tokens.length);
         bool hasUnclaimed = false;
-
         for (uint256 i = 0; i < tokens.length; i++) {
             address erc20 = tokens[i];
             uint256 tosend = cumulativeAmounts[i] - claimed[earner][erc20];
