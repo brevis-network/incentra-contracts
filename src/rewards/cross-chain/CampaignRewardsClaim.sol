@@ -20,8 +20,8 @@ struct Config {
 
 // claim campaign rewards on chain one chain, which was submitted on another chain
 contract CampaignRewardsClaim is AccessControl {
-    // 82531167a8e1b9df58acc5f105c04f72009b9ff406bf7d722b527a2f45d626ae
-    bytes32 public constant REWARD_UPDATER_ROLE = keccak256("reward_updater");
+    // e844ed9e40aeb388cb97d2ef796e81de635718f440751efb46753791698f6bde
+    bytes32 public constant ROOT_UPDATER_ROLE = keccak256("root_updater");
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
     Config public config;
@@ -37,9 +37,9 @@ contract CampaignRewardsClaim is AccessControl {
     event TopRootUpdated(uint64 indexed epoch, bytes32 topRoot);
     event RewardsClaimed(address indexed earner, uint256[] newAmount, uint256[] cumulativeAmounts);
 
-    function init(Config calldata cfg, address owner, address reward_updater) external {
+    function init(Config calldata cfg, address owner, address root_updater) external {
         initOwner(owner);
-        grantRole(REWARD_UPDATER_ROLE, reward_updater);
+        grantRole(ROOT_UPDATER_ROLE, root_updater);
         config = cfg;
     }
 
@@ -72,7 +72,7 @@ contract CampaignRewardsClaim is AccessControl {
      * @param _epoch The epoch number.
      * @param _topRoot The Merkle root for the top tree.
      */
-    function updateRoot(uint64 _epoch, bytes32 _topRoot) external onlyRole(REWARD_UPDATER_ROLE) {
+    function updateRoot(uint64 _epoch, bytes32 _topRoot) external onlyRole(ROOT_UPDATER_ROLE) {
         epoch = _epoch;
         topRoot = _topRoot;
 
