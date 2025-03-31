@@ -12,7 +12,7 @@ abstract contract AccessControl is Ownable {
     event RoleRevoked(bytes32 role, address account);
 
     modifier onlyRole(bytes32 role) {
-        require(hasRole(role, msg.sender), "unatuthorized access");
+        require(hasRole(role, msg.sender), "unauthorized role");
         _;
     }
 
