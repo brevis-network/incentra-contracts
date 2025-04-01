@@ -19,6 +19,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     ConfigCL public config;
+
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
@@ -41,7 +42,8 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
 
     // _appOutput is 1(totalfee app id), pooladdr, epoch, t0, t1
     function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external onlyRole(REWARD_UPDATER_ROLE) {
-        _checkProof(_proof, _appOutput);
+        uint8 appid = _checkProof(_proof, _appOutput);
+        require(appid == 1, "invalid app id");
         address pooladdr = address(bytes20(_appOutput[1:21]));
         require(pooladdr == config.pooladdr, "mismatch pool addr");
         _updateFee(_appOutput[21:]);
@@ -53,23 +55,20 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
 
     // ----- internal functions -----
 
-    // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
+    // update rewards map w/ zk proof,
+    // if _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
+    // if _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
     function _updateRewards(bytes calldata _proof, bytes calldata _appOutput, bool enumerable, uint32 batchIndex)
         internal
     {
-        _checkProof(_proof, _appOutput);
-        _addRewards(_appOutput[1:], enumerable, batchIndex);
-    }
-
-    // update rewards map w/ zk proof, _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function _updateIndirectRewards(
-        bytes calldata _proof,
-        bytes calldata _appOutput,
-        bool enumerable,
-        uint32 batchIndex
-    ) internal {
-        _checkProof(_proof, _appOutput);
-        _addIndirectRewards(_appOutput[1:], enumerable, batchIndex);
+        uint8 appid = _checkProof(_proof, _appOutput);
+        require(appid > 1, "invalid app id");
+        if (appid == 2) {
+            _addRewards(_appOutput[1:], enumerable, batchIndex);
+        } else {
+            // indirect rewards
+            _addIndirectRewards(_appOutput[1:], enumerable, batchIndex);
+        }
     }
 
     // parse circuit output, check and add new reward to total
@@ -132,8 +131,9 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
         emit EpochUpdated(epoch, batchIndex);
     }
 
-    function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
-        uint8 appid = uint8(_appOutput[0]);
+    function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal returns (uint8 appid) {
+        appid = uint8(_appOutput[0]);
         _checkBrevisProof(uint64(block.chainid), _proof, _appOutput, vkMap[appid]);
+        return appid;
     }
 }
