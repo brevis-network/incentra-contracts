@@ -47,7 +47,9 @@ contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
         _claim(msg.sender, to);
     }
 
-    // update rewards map w/ zk proof
+    // update rewards map w/ zk proof,
+    // if _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
+    // if _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
     function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
         external
         onlyRole(REWARD_UPDATER_ROLE)
