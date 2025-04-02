@@ -21,13 +21,14 @@ abstract contract RewardsClaim is RewardsStorage {
         uint256[] memory claimedRewards = new uint256[](tokens.length);
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
-            address erc20 = tokens[i];
-            uint256 tosend = rewards.get(earner, erc20) - claimed[earner][erc20];
-            claimed[earner][erc20] = rewards.get(earner, erc20);
+            address token = tokens[i];
+            uint256 cumulativeAmount = rewards.get(earner, token);
+            uint256 tosend = cumulativeAmount - claimed[earner][token];
+            claimed[earner][token] = cumulativeAmount;
             // send token
             if (tosend > 0) {
-                IERC20(erc20).transfer(to, tosend);
-                tokenClaimedRewards[erc20] += tosend;
+                IERC20(token).transfer(to, tosend);
+                tokenClaimedRewards[token] += tosend;
                 hasUnclaimed = true;
             }
             claimedRewards[i] = tosend;
@@ -39,9 +40,9 @@ abstract contract RewardsClaim is RewardsStorage {
     function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
         AddrAmt[] memory ret = new AddrAmt[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            address erc20 = tokens[i];
-            uint256 tosend = rewards.get(earner, erc20) - claimed[earner][erc20];
-            ret[i] = AddrAmt({token: erc20, amount: tosend});
+            address token = tokens[i];
+            uint256 tosend = rewards.get(earner, token) - claimed[earner][token];
+            ret[i] = AddrAmt({token: token, amount: tosend});
         }
         return ret;
     }

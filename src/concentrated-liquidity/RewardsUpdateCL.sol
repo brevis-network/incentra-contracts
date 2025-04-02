@@ -23,6 +23,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
+    event VkUpdated(uint8 appid, bytes32 vk);
 
     function _initConfig(ConfigCL calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
         brevisProof = _breivisProof;
@@ -51,6 +52,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
 
     function setVk(uint8 appid, bytes32 _vk) external onlyOwner {
         vkMap[appid] = _vk;
+        emit VkUpdated(appid, _vk);
     }
 
     // ----- internal functions -----

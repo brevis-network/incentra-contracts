@@ -48,8 +48,8 @@ contract CampaignRewardsClaim is AccessControl {
         Config memory cfg = config;
         require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
-            address erc20 = cfg.rewards[i].token;
-            IERC20(erc20).transfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
+            address token = cfg.rewards[i].token;
+            IERC20(token).transfer(cfg.creator, IERC20(token).balanceOf(address(this)));
         }
     }
 
