@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
 import "../../access/AccessControl.sol";
@@ -20,6 +21,8 @@ struct Config {
 
 // claim campaign rewards on chain one chain, which was submitted on another chain
 contract CampaignRewardsClaim is AccessControl {
+    using SafeERC20 for IERC20;
+
     // e844ed9e40aeb388cb97d2ef796e81de635718f440751efb46753791698f6bde
     bytes32 public constant ROOT_UPDATER_ROLE = keccak256("root_updater");
 
@@ -49,7 +52,7 @@ contract CampaignRewardsClaim is AccessControl {
         require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address token = cfg.rewards[i].token;
-            IERC20(token).transfer(cfg.creator, IERC20(token).balanceOf(address(this)));
+            IERC20(token).safeTransfer(cfg.creator, IERC20(token).balanceOf(address(this)));
         }
     }
 
@@ -126,7 +129,7 @@ contract CampaignRewardsClaim is AccessControl {
             claimed[earner][erc20] = cumulativeAmounts[i];
             // send token
             if (tosend > 0) {
-                IERC20(erc20).transfer(to, tosend);
+                IERC20(erc20).safeTransfer(to, tosend);
                 tokenClaimedRewards[erc20] += tosend;
                 hasUnclaimed = true;
             }

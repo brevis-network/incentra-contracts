@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";
@@ -10,6 +11,7 @@ import "./RewardsUpdateCL.sol";
 
 // submit and claim campaign rewards on a same chain
 contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
+    using SafeERC20 for IERC20;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
@@ -33,7 +35,7 @@ contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
         require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
-            IERC20(erc20).transfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
+            IERC20(erc20).safeTransfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
         }
     }
 

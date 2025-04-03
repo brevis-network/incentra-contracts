@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../RewardsStorage.sol";
 import "../../lib/EnumerableMap.sol";
 
 // claim campaign rewards on chain X
 abstract contract RewardsClaim is RewardsStorage {
+    using SafeERC20 for IERC20;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     // user -> token -> claimed amount
@@ -27,7 +29,7 @@ abstract contract RewardsClaim is RewardsStorage {
             claimed[earner][token] = cumulativeAmount;
             // send token
             if (tosend > 0) {
-                IERC20(token).transfer(to, tosend);
+                IERC20(token).safeTransfer(to, tosend);
                 tokenClaimedRewards[token] += tosend;
                 hasUnclaimed = true;
             }
