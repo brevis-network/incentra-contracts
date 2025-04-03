@@ -19,4 +19,8 @@ interface ICampaign {
     function genSubRoot(uint64 epoch, uint256 nLeaves) external;
 
     function genTopRoot(uint64 epoch) external;
+
+    function state() external view returns (uint8);
+
+    function currEpoch() external view returns (uint64);
 }
