@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// generaic interface for incentra backend to interact with the campaign contract
+// generic interface for incentra backend to interact with the campaign contract
 // each campaign contract may only implement a subset of the functions
 interface ICampaign {
     function updateRewards(bytes calldata proof, bytes calldata appOutput, uint32 batchIndex) external;
