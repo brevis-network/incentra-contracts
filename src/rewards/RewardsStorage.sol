@@ -45,11 +45,15 @@ abstract contract RewardsStorage {
         return rewards.get(user, token);
     }
 
-    function viewTotalRewards(address earner) external view returns (AddrAmt[] memory) {
+    function viewTotalRewards(address user) external view returns (AddrAmt[] memory) {
         AddrAmt[] memory ret = new AddrAmt[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            ret[i] = AddrAmt({token: tokens[i], amount: rewards.get(earner, tokens[i])});
+            ret[i] = AddrAmt({token: tokens[i], amount: rewards.get(user, tokens[i])});
         }
         return ret;
+    }
+
+    function getRewardsLength() external view returns (uint64) {
+        return uint64(rewards.length());
     }
 }

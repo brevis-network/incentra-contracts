@@ -23,4 +23,6 @@ interface ICampaign {
     function state() external view returns (uint8);
 
     function currEpoch() external view returns (uint64);
+
+    function getRewardsLength() external view returns (uint64);
 }
