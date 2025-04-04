@@ -121,7 +121,7 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
      * @param epoch The epoch.
      */
     function genTopRoot(uint64 epoch) external {
-        require(state == State.SubRootsGeneration, "invalid state");
+        require(state == State.TopRootGeneration, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
 
         topRoot = genMerkleRoot(subRoots.values());
