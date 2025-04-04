@@ -23,8 +23,8 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
     event VkUpdated(uint8 appid, bytes32 vk);
 
-    function _initConfig(ConfigTH calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
-        brevisProof = _breivisProof;
+    function _initConfig(ConfigTH calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks) internal {
+        brevisProof = _brevisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
@@ -47,9 +47,12 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
     // ----- internal functions -----
 
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    function _updateRewards(bytes calldata _proof, bytes calldata _appOutput, bool enumerable, uint32 batchIndex)
-        internal
-    {
+    function _updateRewards(
+        bytes calldata _proof,
+        bytes calldata _appOutput,
+        bool enumerable,
+        uint32 batchIndex
+    ) internal {
         _checkProof(_proof, _appOutput);
         _addRewards(_appOutput[1:], enumerable, batchIndex);
     }

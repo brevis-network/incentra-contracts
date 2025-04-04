@@ -22,11 +22,11 @@ contract CampaignTH is BrevisProofApp, RewardsUpdateTH, RewardsClaim, AccessCont
         IBrevisProof _brv,
         address owner,
         bytes32[] calldata vks,
-        address reward_updater
+        address rewardUpdater
     ) external {
         initOwner(owner);
         _initConfig(cfg, _brv, vks);
-        grantRole(REWARD_UPDATER_ROLE, reward_updater);
+        grantRole(REWARD_UPDATER_ROLE, rewardUpdater);
     }
 
     // after grace period, refund all remaining balance to creator
@@ -50,10 +50,11 @@ contract CampaignTH is BrevisProofApp, RewardsUpdateTH, RewardsClaim, AccessCont
     }
 
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
-        external
-        onlyRole(REWARD_UPDATER_ROLE)
-    {
+    function updateRewards(
+        bytes calldata _proof,
+        bytes calldata _appOutput,
+        uint32 batchIndex
+    ) external onlyRole(REWARD_UPDATER_ROLE) {
         _updateRewards(_proof, _appOutput, false, batchIndex);
     }
 }

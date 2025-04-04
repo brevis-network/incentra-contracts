@@ -12,7 +12,7 @@ struct ConfigCL {
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
     AddrAmt[] rewards; // list of [reward token and total amount]
-    address pooladdr; // which pool this campaign is for
+    address poolAddr; // which pool this campaign is for
 }
 
 abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, AccessControl {
@@ -25,8 +25,8 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
     event VkUpdated(uint8 appid, bytes32 vk);
 
-    function _initConfig(ConfigCL calldata cfg, IBrevisProof _breivisProof, bytes32[] calldata vks) internal {
-        brevisProof = _breivisProof;
+    function _initConfig(ConfigCL calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks) internal {
+        brevisProof = _brevisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
@@ -41,12 +41,12 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
 
     // ----- external functions -----
 
-    // _appOutput is 1(totalfee app id), pooladdr, epoch, t0, t1
+    // _appOutput is 1(totalfee app id), poolAddr, epoch, t0, t1
     function updateTotalFee(bytes calldata _proof, bytes calldata _appOutput) external onlyRole(REWARD_UPDATER_ROLE) {
         uint8 appid = _checkProof(_proof, _appOutput);
         require(appid == 1, "invalid app id");
-        address pooladdr = address(bytes20(_appOutput[1:21]));
-        require(pooladdr == config.pooladdr, "mismatch pool addr");
+        address poolAddr = address(bytes20(_appOutput[1:21]));
+        require(poolAddr == config.poolAddr, "mismatch pool addr");
         _updateFee(_appOutput[21:]);
     }
 
@@ -60,9 +60,12 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
     // update rewards map w/ zk proof,
     // if _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     // if _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function _updateRewards(bytes calldata _proof, bytes calldata _appOutput, bool enumerable, uint32 batchIndex)
-        internal
-    {
+    function _updateRewards(
+        bytes calldata _proof,
+        bytes calldata _appOutput,
+        bool enumerable,
+        uint32 batchIndex
+    ) internal {
         uint8 appid = _checkProof(_proof, _appOutput);
         require(appid > 1, "invalid app id");
         if (appid == 2) {
