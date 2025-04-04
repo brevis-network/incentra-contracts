@@ -104,6 +104,19 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     }
 
     /**
+     * @notice Returns the number of leaves left to be processed.
+     * @return nLeavesLeft The number of leaves left.
+     */
+    function getNumLeavesLeft() external view returns (uint64 nLeavesLeft) {
+        uint256 subRootIndex = subRoots.length();
+        uint256 indexStart = 0;
+        if (subRootIndex > 0) {
+            indexStart = subRootUserIndexStart[subRootIndex - 1];
+        }
+        nLeavesLeft = uint64(rewards.length() - indexStart);
+    }
+
+    /**
      * @notice Generates and records the top Merkle tree root, using the subtree roots as leaves.
      * @param epoch The epoch.
      */

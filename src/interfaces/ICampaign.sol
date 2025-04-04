@@ -24,5 +24,5 @@ interface ICampaign {
 
     function currEpoch() external view returns (uint64);
 
-    function getRewardsLength() external view returns (uint64);
+    function getNumLeavesLeft() external view returns (uint64);
 }
