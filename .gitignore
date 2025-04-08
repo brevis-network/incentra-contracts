@@ -14,3 +14,7 @@ docs/
 .env
 
 .vscode/
+node_modules
+artifacts
+cache_hardhat
+src/typeChain
