@@ -14,7 +14,7 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     enum State {
-        EpochInit,
+        Idle,
         RewardsSubmission,
         SubRootsGeneration,
         TopRootGeneration
@@ -42,16 +42,16 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
 
     // ----------- state transition -----------
     function startEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
-        require(state == State.EpochInit, "invalid state");
+        require(state == State.Idle, "invalid state");
+        require(epoch > currEpoch, "invalid epoch");
         currEpoch = epoch;
         state = State.RewardsSubmission;
-
         subRoots.clear();
     }
 
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
-        currEpoch = epoch;
+        require(currEpoch == epoch, "invalid epoch");
         state = State.SubRootsGeneration;
     }
 
@@ -68,7 +68,6 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     function genSubRoot(uint64 epoch, uint256 nLeaves) external {
         require(state == State.SubRootsGeneration, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
-
         require(nLeaves <= 2 ** 32, "too many leaves");
 
         uint256 subRootIndex = subRoots.length();
@@ -104,30 +103,14 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     }
 
     /**
-     * @notice Returns the number of leaves left to be processed.
-     * @return nLeavesLeft The number of leaves left.
-     */
-    function getNumLeavesLeft() external view returns (uint64 nLeavesLeft) {
-        uint256 subRootIndex = subRoots.length();
-        uint256 indexStart = 0;
-        if (subRootIndex > 0) {
-            indexStart = subRootUserIndexStart[subRootIndex - 1];
-        }
-        nLeavesLeft = uint64(rewards.length() - indexStart);
-    }
-
-    /**
      * @notice Generates and records the top Merkle tree root, using the subtree roots as leaves.
      * @param epoch The epoch.
      */
     function genTopRoot(uint64 epoch) external {
         require(state == State.TopRootGeneration, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
-
         topRoot = genMerkleRoot(subRoots.values());
-
-        currEpoch++;
-        state = State.EpochInit;
+        state = State.Idle;
     }
 
     function getMerkleProof(uint64 epoch, address user)
@@ -135,14 +118,13 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
         view
         returns (uint256[] memory rewardAmounts, bytes32[] memory proof)
     {
-        require(state == State.EpochInit, "invalid state");
+        require(state == State.Idle, "invalid state");
         require(epoch == currEpoch - 1, "invalid epoch");
 
         address[] memory rewardTokens = getTokens();
         rewardAmounts = rewards.getAmounts(user, rewardTokens);
 
         uint256 userIndex = rewards._keys._inner._positions[bytes32(uint256(uint160(user)))] - 1;
-
         uint256 subRootIndex;
         while (subRootIndex < subRoots.length() - 1 && userIndex >= subRootUserIndexStart[subRootIndex]) {
             ++subRootIndex;
@@ -160,7 +142,6 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
             hashes[i] = keccak256(abi.encodePacked(_user, rewardTokens, _rewardAmounts));
         }
         bytes32[] memory subProof = genMerkleProof(hashes, userIndex - indexStart);
-
         bytes32[] memory topProof = genMerkleProof(subRoots.values(), subRootIndex);
 
         proof = new bytes32[](subProof.length + topProof.length);

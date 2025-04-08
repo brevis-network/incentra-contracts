@@ -20,9 +20,9 @@ interface ICampaign {
 
     function genTopRoot(uint64 epoch) external;
 
+    function updateRoot(uint64 _epoch, bytes32 _topRoot) external;
+
     function state() external view returns (uint8);
 
     function currEpoch() external view returns (uint64);
-
-    function getNumLeavesLeft() external view returns (uint64);
 }
