@@ -119,7 +119,7 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
         returns (uint256[] memory rewardAmounts, bytes32[] memory proof)
     {
         require(state == State.Idle, "invalid state");
-        require(epoch == currEpoch - 1, "invalid epoch");
+        require(epoch == currEpoch, "invalid epoch");
 
         address[] memory rewardTokens = getTokens();
         rewardAmounts = rewards.getAmounts(user, rewardTokens);
