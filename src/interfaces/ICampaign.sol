@@ -26,9 +26,9 @@ interface ICampaign {
 
     function currEpoch() external view returns (uint64);
 
+    function topRoot() external view returns (bytes32);
+
     // --- rewards claim ---
 
     function updateRoot(uint64 _epoch, bytes32 _topRoot) external;
-
-    function topRoot() external view returns (bytes32);
 }
