@@ -12,6 +12,8 @@ interface ICampaign {
 
     // --------- cross-chain related ---------
 
+    // --- rewrads submission ---
+
     function startEpoch(uint64 epoch) external;
 
     function startSubRootGen(uint64 epoch) external;
@@ -20,9 +22,13 @@ interface ICampaign {
 
     function genTopRoot(uint64 epoch) external;
 
-    function updateRoot(uint64 _epoch, bytes32 _topRoot) external;
-
     function state() external view returns (uint8);
 
     function currEpoch() external view returns (uint64);
+
+    // --- rewards claim ---
+
+    function updateRoot(uint64 _epoch, bytes32 _topRoot) external;
+
+    function topRoot() external view returns (bytes32);
 }
