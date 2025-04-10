@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
 import "../../access/AccessControl.sol";
+import "./message/MessageReceiverApp.sol";
 
 struct AddrAmt {
     address token;
@@ -20,7 +21,7 @@ struct Config {
 }
 
 // claim campaign rewards on chain one chain, which was submitted on another chain
-contract CampaignRewardsClaim is AccessControl {
+contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     using SafeERC20 for IERC20;
 
     // e844ed9e40aeb388cb97d2ef796e81de635718f440751efb46753791698f6bde
@@ -37,8 +38,13 @@ contract CampaignRewardsClaim is AccessControl {
     uint64 public epoch;
     bytes32 public topRoot;
 
+    uint64 public submissionChainId;
+    address public submissionAddress;
+
     event TopRootUpdated(uint64 indexed epoch, bytes32 topRoot);
     event RewardsClaimed(address indexed earner, uint256[] newAmount, uint256[] cumulativeAmounts);
+    event MessageBusSet(address messageBus);
+    event SubmissionContractSet(uint64 submissionChainId, address submissionAddress);
 
     function init(Config calldata cfg, address owner, address root_updater) external {
         initOwner(owner);
@@ -80,6 +86,34 @@ contract CampaignRewardsClaim is AccessControl {
         topRoot = _topRoot;
 
         emit TopRootUpdated(epoch, topRoot);
+    }
+
+    // called by MessageBus on destination chain to receive cross-chain messages
+    function executeMessage(
+        address _srcContract,
+        uint64 _srcChainId,
+        bytes calldata _message,
+        address // executor
+    ) external override onlyMessageBus returns (ExecutionStatus) {
+        (uint64 _epoch, bytes32 _topRoot) = abi.decode((_message), (uint64, bytes32));
+        require(_srcChainId == submissionChainId, "invalid source chain");
+        require(_srcContract == submissionAddress, "invalid source contract");
+        epoch = _epoch;
+        topRoot = _topRoot;
+        emit TopRootUpdated(epoch, topRoot);
+        return ExecutionStatus.Success;
+    }
+
+    function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
+        submissionChainId = _submissionChainId;
+        submissionAddress = _submissionAddress;
+        emit SubmissionContractSet(_submissionChainId, _submissionAddress);
+    }
+
+    function setMessageBus(address _messageBus) external onlyOwner {
+        require(_messageBus != address(0), "invalid message bus");
+        messageBus = _messageBus;
+        emit MessageBusSet(_messageBus);
     }
 
     function getTokens() public view returns (address[] memory) {

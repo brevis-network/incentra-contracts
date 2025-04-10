@@ -7,9 +7,10 @@ import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 import "../../access/AccessControl.sol";
 import "../../lib/EnumerableMap.sol";
 import "../RewardsStorage.sol";
+import "./message/MessageSenderApp.sol";
 
 // generate campaign rewards merkle root and proof on one chain, which will be claimed on another chain
-abstract contract RewardsMerkle is RewardsStorage, AccessControl {
+abstract contract RewardsMerkle is RewardsStorage, AccessControl, MessageSenderApp {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
@@ -39,6 +40,8 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     event SubRootGenerated(uint64 indexed epoch, uint256 indexed subRootIndex, bytes32 subRoot);
     event AllSubRootsGenerated(uint64 indexed epoch);
     event TopRootGenerated(uint64 indexed epoch, bytes32 topRoot);
+    event TopRootSent(uint64 indexed epoch, bytes32 topRoot, address receiver, uint64 dstChainId);
+    event MessageBusSet(address messageBus);
 
     // ----------- state transition -----------
     function startEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
@@ -111,6 +114,27 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
         require(epoch == currEpoch, "invalid epoch");
         topRoot = genMerkleRoot(subRoots.values());
         state = State.Idle;
+        emit TopRootGenerated(currEpoch, topRoot);
+    }
+
+    /**
+     * @notice Send the top Merkle root to the destination chain.
+     * @param _receiver The CampaignRewardsClaim contract in the destination chain.
+     * @param _dstChainId The destination chain ID.
+     */
+    function sendTopRoot(address _receiver, uint64 _dstChainId) external payable onlyOwner {
+        require(messageBus != address(0), "message bus not set");
+        require(state == State.Idle, "invalid state");
+        require(topRoot != bytes32(0), "top root not generated");
+        bytes memory message = abi.encode(currEpoch, topRoot);
+        sendMessage(_receiver, _dstChainId, message, msg.value);
+        emit TopRootSent(currEpoch, topRoot, _receiver, _dstChainId);
+    }
+
+    function setMessageBus(address _messageBus) external onlyOwner {
+        require(_messageBus != address(0), "invalid message bus");
+        messageBus = _messageBus;
+        emit MessageBusSet(_messageBus);
     }
 
     function getMerkleProof(uint64 epoch, address user)
