@@ -20,12 +20,16 @@ abstract contract MessageReceiverApp {
      * @param _sender The address of the source app contract
      * @param _srcChainId The source chain ID where the transfer is originated from
      * @param _message Arbitrary message bytes originated from and encoded by the source app contract
-     * @param _executor Address who called the MessageBus execution function
      */
-    function executeMessage(address _sender, uint64 _srcChainId, bytes calldata _message, address _executor)
-        external
-        virtual
-        onlyMessageBus
-        returns (ExecutionStatus)
-    {}
+    function executeMessage(
+        address _sender,
+        uint64 _srcChainId,
+        bytes calldata _message,
+        address // _executor: address who called the MessageBus execution function
+    ) external onlyMessageBus returns (ExecutionStatus) {
+        _executeMessage(_sender, _srcChainId, _message);
+        return ExecutionStatus.Success;
+    }
+
+    function _executeMessage(address _sender, uint64 _srcChainId, bytes calldata _message) internal virtual {}
 }

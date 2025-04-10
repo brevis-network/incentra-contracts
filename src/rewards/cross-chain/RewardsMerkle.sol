@@ -109,7 +109,7 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl, MessageSenderA
      * @notice Generates and records the top Merkle tree root, using the subtree roots as leaves.
      * @param epoch The epoch.
      */
-    function genTopRoot(uint64 epoch) external {
+    function genTopRoot(uint64 epoch) public {
         require(state == State.TopRootGeneration, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
         topRoot = genMerkleRoot(subRoots.values());
@@ -122,7 +122,7 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl, MessageSenderA
      * @param _receiver The CampaignRewardsClaim contract in the destination chain.
      * @param _dstChainId The destination chain ID.
      */
-    function sendTopRoot(address _receiver, uint64 _dstChainId) external payable onlyOwner {
+    function sendTopRoot(address _receiver, uint64 _dstChainId) public payable {
         require(messageBus != address(0), "message bus not set");
         require(state == State.Idle, "invalid state");
         require(topRoot != bytes32(0), "top root not generated");
@@ -131,10 +131,9 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl, MessageSenderA
         emit TopRootSent(currEpoch, topRoot, _receiver, _dstChainId);
     }
 
-    function setMessageBus(address _messageBus) external onlyOwner {
-        require(_messageBus != address(0), "invalid message bus");
-        messageBus = _messageBus;
-        emit MessageBusSet(_messageBus);
+    function genAndSendTopRoot(address _receiver, uint64 _dstChainId) external payable {
+        genTopRoot(currEpoch);
+        sendTopRoot(_receiver, _dstChainId);
     }
 
     function getMerkleProof(uint64 epoch, address user)
@@ -175,6 +174,14 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl, MessageSenderA
         for (uint256 i = 0; i < topProof.length; i++) {
             proof[subProof.length + i] = topProof[i];
         }
+    }
+
+    // ----- admin functions -----
+
+    function setMessageBus(address _messageBus) external onlyOwner {
+        require(_messageBus != address(0), "invalid message bus");
+        messageBus = _messageBus;
+        emit MessageBusSet(_messageBus);
     }
 
     // ----------- Private Functions -----------

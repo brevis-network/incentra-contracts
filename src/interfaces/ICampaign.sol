@@ -12,7 +12,7 @@ interface ICampaign {
 
     // --------- cross-chain related ---------
 
-    // --- rewrads submission ---
+    // --- rewrads submission contract ---
 
     function startEpoch(uint64 epoch) external;
 
@@ -22,13 +22,17 @@ interface ICampaign {
 
     function genTopRoot(uint64 epoch) external;
 
+    function sendTopRoot(address _receiver, uint64 _dstChainId) external payable;
+
+    function genAndSendTopRoot(address _receiver, uint64 _dstChainId) external payable;
+
     function state() external view returns (uint8);
 
     function currEpoch() external view returns (uint64);
 
     function topRoot() external view returns (bytes32);
 
-    // --- rewards claim ---
+    // --- rewards claim contract ---
 
     function updateRoot(uint64 _epoch, bytes32 _topRoot) external;
 }

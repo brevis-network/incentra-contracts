@@ -82,38 +82,16 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
      * @param _topRoot The Merkle root for the top tree.
      */
     function updateRoot(uint64 _epoch, bytes32 _topRoot) external onlyRole(ROOT_UPDATER_ROLE) {
-        epoch = _epoch;
-        topRoot = _topRoot;
-
-        emit TopRootUpdated(epoch, topRoot);
+        _updateRoot(_epoch, _topRoot);
     }
 
-    // called by MessageBus on destination chain to receive cross-chain messages
-    function executeMessage(
-        address _srcContract,
-        uint64 _srcChainId,
-        bytes calldata _message,
-        address // executor
-    ) external override onlyMessageBus returns (ExecutionStatus) {
-        (uint64 _epoch, bytes32 _topRoot) = abi.decode((_message), (uint64, bytes32));
+    // called by MessageBus contract to receive cross-chain message from the rewards submission contract
+    function _executeMessage(address _srcContract, uint64 _srcChainId, bytes calldata _message) internal override {
         require(_srcChainId == submissionChainId, "invalid source chain");
         require(_srcContract == submissionAddress, "invalid source contract");
-        epoch = _epoch;
-        topRoot = _topRoot;
-        emit TopRootUpdated(epoch, topRoot);
-        return ExecutionStatus.Success;
-    }
-
-    function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
-        submissionChainId = _submissionChainId;
-        submissionAddress = _submissionAddress;
-        emit SubmissionContractSet(_submissionChainId, _submissionAddress);
-    }
-
-    function setMessageBus(address _messageBus) external onlyOwner {
-        require(_messageBus != address(0), "invalid message bus");
-        messageBus = _messageBus;
-        emit MessageBusSet(_messageBus);
+        (uint64 _epoch, bytes32 _topRoot) = abi.decode((_message), (uint64, bytes32));
+        require(_epoch > epoch, "invalid epoch");
+        _updateRoot(_epoch, _topRoot);
     }
 
     function getTokens() public view returns (address[] memory) {
@@ -131,6 +109,19 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
             ret[i] = AddrAmt({token: tokens[i], amount: claimed[earner][tokens[i]]});
         }
         return ret;
+    }
+
+    // ----- admin functions -----
+    function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
+        submissionChainId = _submissionChainId;
+        submissionAddress = _submissionAddress;
+        emit SubmissionContractSet(_submissionChainId, _submissionAddress);
+    }
+
+    function setMessageBus(address _messageBus) external onlyOwner {
+        require(_messageBus != address(0), "invalid message bus");
+        messageBus = _messageBus;
+        emit MessageBusSet(_messageBus);
     }
 
     // ------------------------------------------
@@ -171,6 +162,12 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         }
         require(hasUnclaimed, "no unclaimed rewards");
         emit RewardsClaimed(earner, newAmount, cumulativeAmounts);
+    }
+
+    function _updateRoot(uint64 _epoch, bytes32 _topRoot) private {
+        epoch = _epoch;
+        topRoot = _topRoot;
+        emit TopRootUpdated(epoch, topRoot);
     }
 
     function verifyMerkleProof(bytes32[] memory proof, bytes32 root, bytes32 leafHash) private pure returns (bool) {
