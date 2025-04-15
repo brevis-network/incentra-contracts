@@ -18,12 +18,16 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     ConfigTH public config;
+    uint64 public dataChainId; // chain id of the data source
+
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
     event VkUpdated(uint8 appid, bytes32 vk);
 
-    function _initConfig(ConfigTH calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks) internal {
+    function _initConfig(ConfigTH calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
+        internal
+    {
         brevisProof = _brevisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);
@@ -35,6 +39,7 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
         for (uint8 i = 0; i < vks.length; i++) {
             vkMap[i + 1] = vks[i];
         }
+        dataChainId = _dataChainId;
     }
 
     // ----- external functions -----
@@ -47,12 +52,9 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
     // ----- internal functions -----
 
     // update rewards map w/ zk proof, _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    function _updateRewards(
-        bytes calldata _proof,
-        bytes calldata _appOutput,
-        bool enumerable,
-        uint32 batchIndex
-    ) internal {
+    function _updateRewards(bytes calldata _proof, bytes calldata _appOutput, bool enumerable, uint32 batchIndex)
+        internal
+    {
         _checkProof(_proof, _appOutput);
         _addRewards(_appOutput[1:], enumerable, batchIndex);
     }
@@ -83,6 +85,6 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal {
         uint8 appid = uint8(_appOutput[0]);
-        _checkBrevisProof(uint64(block.chainid), _proof, _appOutput, vkMap[appid]);
+        _checkBrevisProof(dataChainId, _proof, _appOutput, vkMap[appid]);
     }
 }
