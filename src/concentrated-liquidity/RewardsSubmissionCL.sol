@@ -10,24 +10,24 @@ contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdateCL, RewardsMerkle {
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(
         ConfigCL calldata cfg,
-        IBrevisProof _brv,
+        IBrevisProof brv,
         address owner,
         bytes32[] calldata vks,
+        uint64 dataChainId,
         address rewardUpdater
     ) external {
         initOwner(owner);
-        _initConfig(cfg, _brv, vks);
+        _initConfig(cfg, brv, vks, dataChainId);
         grantRole(REWARD_UPDATER_ROLE, rewardUpdater);
     }
 
     // update rewards map w/ zk proof,
     // if _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     // if _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function updateRewards(
-        bytes calldata _proof,
-        bytes calldata _appOutput,
-        uint32 batchIndex
-    ) external onlyRole(REWARD_UPDATER_ROLE) {
+    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
+        external
+        onlyRole(REWARD_UPDATER_ROLE)
+    {
         _updateRewards(_proof, _appOutput, true, batchIndex);
     }
 }

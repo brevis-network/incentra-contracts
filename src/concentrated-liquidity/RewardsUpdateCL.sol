@@ -19,13 +19,16 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     ConfigCL public config;
+    uint64 public dataChainId; // chain id of the data source
 
     mapping(uint8 => bytes32) public vkMap; // from circuit id to its vkhash
 
     event EpochUpdated(uint32 epoch, uint32 batchIndex);
     event VkUpdated(uint8 appid, bytes32 vk);
 
-    function _initConfig(ConfigCL calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks) internal {
+    function _initConfig(ConfigCL calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
+        internal
+    {
         brevisProof = _brevisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);
@@ -37,6 +40,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
         for (uint8 i = 0; i < vks.length; i++) {
             vkMap[i + 1] = vks[i];
         }
+        dataChainId = _dataChainId;
     }
 
     // ----- external functions -----
@@ -60,12 +64,9 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
     // update rewards map w/ zk proof,
     // if _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
     // if _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function _updateRewards(
-        bytes calldata _proof,
-        bytes calldata _appOutput,
-        bool enumerable,
-        uint32 batchIndex
-    ) internal {
+    function _updateRewards(bytes calldata _proof, bytes calldata _appOutput, bool enumerable, uint32 batchIndex)
+        internal
+    {
         uint8 appid = _checkProof(_proof, _appOutput);
         require(appid > 1, "invalid app id");
         if (appid == 2) {
@@ -138,7 +139,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
 
     function _checkProof(bytes calldata _proof, bytes calldata _appOutput) internal returns (uint8 appid) {
         appid = uint8(_appOutput[0]);
-        _checkBrevisProof(uint64(block.chainid), _proof, _appOutput, vkMap[appid]);
+        _checkBrevisProof(dataChainId, _proof, _appOutput, vkMap[appid]);
         return appid;
     }
 }
