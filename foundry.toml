@@ -5,6 +5,11 @@ libs = ["lib"]
 
 solc_version = '0.8.26'
 via_ir = true
+optimizer = true
+optimizer_runs = 20_000
+
+[profile.ci]
+verbosity = 4
 
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin/contracts/",
