@@ -46,10 +46,20 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     event MessageBusSet(address messageBus);
     event SubmissionContractSet(uint64 submissionChainId, address submissionAddress);
 
-    function init(Config calldata cfg, address owner, address root_updater) external {
+    function init(
+        Config calldata cfg,
+        address owner,
+        address root_updater,
+        address _messageBus,
+        uint64 _submissionChainId,
+        address _submissionAddress
+    ) external {
         initOwner(owner);
         grantRole(ROOT_UPDATER_ROLE, root_updater);
         config = cfg;
+        messageBus = _messageBus;
+        submissionChainId = _submissionChainId;
+        submissionAddress = _submissionAddress;
     }
 
     // after grace period, refund all remaining balance to creator
@@ -119,7 +129,6 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     }
 
     function setMessageBus(address _messageBus) external onlyOwner {
-        require(_messageBus != address(0), "invalid message bus");
         messageBus = _messageBus;
         emit MessageBusSet(_messageBus);
     }
