@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../BrevisProofApp.sol";
+import "../brevis/BrevisProofApp.sol";
 import "../rewards/cross-chain/RewardsMerkle.sol";
 import "./RewardsUpdateTH.sol";
 
