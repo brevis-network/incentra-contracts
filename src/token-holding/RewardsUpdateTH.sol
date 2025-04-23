@@ -76,6 +76,7 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 rewards.add(earner, tokens[i], amount, enumerable);
+                tokenCumulativeRewards[tokens[i]] += amount;
                 newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);
