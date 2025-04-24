@@ -87,6 +87,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
         require(fee.token0Amt == t0fee, "token0 fee mismatch");
         require(fee.token1Amt == t1fee, "token1 fee mismatch");
         uint256 numTokens = tokens.length;
+        uint256[] memory newTokenRewards = new uint256[](numTokens);
         for (uint256 idx = 36; idx < raw.length; idx += 20 + 16 * numTokens) {
             address earner = address(bytes20(raw[idx:idx + 20]));
             // skip empty address placeholders for the rest of array
@@ -99,10 +100,13 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 rewards.add(earner, tokens[i], amount, enumerable);
-                tokenCumulativeRewards[tokens[i]] += amount;
+                newTokenRewards[i] += amount;
                 newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);
+        }
+        for (uint256 i = 0; i < numTokens; i += 1) {
+            tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
         emit EpochUpdated(epoch, batchIndex);
     }
@@ -112,6 +116,7 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
         uint32 epoch = uint32(bytes4(raw[0:4]));
         address indirect = address(bytes20(raw[4:24]));
         uint256 numTokens = tokens.length;
+        uint256[] memory newTokenRewards = new uint256[](numTokens);
         for (uint256 idx = 24; idx < raw.length; idx += 20 + 16 * numTokens) {
             address earner = address(bytes20(raw[idx:idx + 20]));
             // skip empty address placeholders for the rest of array
@@ -129,10 +134,13 @@ abstract contract RewardsUpdateCL is BrevisProofApp, TotalFee, RewardsStorage, A
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 rewards.add(earner, tokens[i], amount, enumerable);
-                tokenCumulativeRewards[tokens[i]] += amount;
+                newTokenRewards[i] += amount;
                 newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);
+        }
+        for (uint256 i = 0; i < numTokens; i += 1) {
+            tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
         emit EpochUpdated(epoch, batchIndex);
     }

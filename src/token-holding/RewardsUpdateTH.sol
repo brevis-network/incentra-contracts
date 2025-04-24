@@ -64,6 +64,7 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
     function _addRewards(bytes calldata raw, bool enumerable, uint32 batchIndex) internal {
         uint32 epoch = uint32(bytes4(raw[0:4]));
         uint256 numTokens = tokens.length;
+        uint256[] memory newTokenRewards = new uint256[](numTokens);
         for (uint256 idx = 4; idx < raw.length; idx += 20 + 16 * numTokens) {
             address earner = address(bytes20(raw[idx:idx + 20]));
             // skip empty address placeholders for the rest of array
@@ -76,10 +77,13 @@ abstract contract RewardsUpdateTH is BrevisProofApp, RewardsStorage, Ownable {
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount = uint128(bytes16(raw[idx + 20 + 16 * i:idx + 20 + 16 * i + 16]));
                 rewards.add(earner, tokens[i], amount, enumerable);
-                tokenCumulativeRewards[tokens[i]] += amount;
+                newTokenRewards[i] += amount;
                 newRewards[i] = amount;
             }
             emit RewardsAdded(earner, newRewards);
+        }
+        for (uint256 i = 0; i < numTokens; i += 1) {
+            tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
         emit EpochUpdated(epoch, batchIndex);
     }
