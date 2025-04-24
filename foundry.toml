@@ -17,6 +17,7 @@ remappings = [
     "forge-std/=lib/forge-std/src/",
     "halmos-cheatcodes/=lib/openzeppelin/lib/halmos-cheatcodes/src/",
     "openzeppelin/=lib/openzeppelin/",
+    "openzeppelin-v4/=lib/openzeppelin-v4",
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
