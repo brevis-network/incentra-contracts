@@ -21,13 +21,9 @@ contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdateCL, RewardsMerkle {
         grantRole(REWARD_UPDATER_ROLE, rewardUpdater);
     }
 
-    // update rewards map w/ zk proof,
-    // if _appOutput is 2(reward app id), t0, t1, [earner:amt u128:amt u128]
-    // if _appOutput is x(indirect reward app id), indirect addr, [earner:amt u128:amt u128]
-    function updateRewards(bytes calldata _proof, bytes calldata _appOutput, uint32 batchIndex)
-        external
-        onlyRole(REWARD_UPDATER_ROLE)
-    {
-        _updateRewards(_proof, _appOutput, true, batchIndex);
+    // ----- internal functions -----
+
+    function _useEnumerableMap() internal pure override returns (bool) {
+        return true;
     }
 }

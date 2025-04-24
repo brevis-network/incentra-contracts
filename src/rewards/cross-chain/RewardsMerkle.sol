@@ -4,13 +4,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
-import "../../access/AccessControl.sol";
 import "../../lib/EnumerableMap.sol";
 import "../RewardsStorage.sol";
 import "./message/MessageSenderApp.sol";
 
 // generate campaign rewards merkle root and proof on one chain, which will be claimed on another chain
-abstract contract RewardsMerkle is RewardsStorage, AccessControl, MessageSenderApp {
+abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
