@@ -80,14 +80,14 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
             indexStart = subRootUserIndexStart[subRootIndex - 1];
         }
 
-        uint256 maxNLeaves = rewards.length() - indexStart;
+        uint256 maxNLeaves = _rewards.length() - indexStart;
         if (nLeaves > maxNLeaves) {
             nLeaves = maxNLeaves;
         }
         bytes32[] memory hashes = new bytes32[](nLeaves);
         address[] memory rewardTokens = getTokens();
         for (uint256 i = 0; i < nLeaves; i++) {
-            (address user, uint256[] memory rewardAmounts) = rewards.getUserAmountsAt(indexStart + i, rewardTokens);
+            (address user, uint256[] memory rewardAmounts) = _rewards.getUserAmountsAt(indexStart + i, rewardTokens);
             bytes32 leafHash = keccak256(abi.encodePacked(user, rewardTokens, rewardAmounts));
             hashes[i] = leafHash;
             emit SubRootLeafProcessed(epoch, subRootIndex, i, user, rewardAmounts, leafHash);
@@ -144,23 +144,23 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         require(epoch == currEpoch, "invalid epoch");
 
         address[] memory rewardTokens = getTokens();
-        rewardAmounts = rewards.getAmounts(user, rewardTokens);
+        rewardAmounts = _rewards.getAmounts(user, rewardTokens);
 
-        uint256 userIndex = rewards._keys._inner._positions[bytes32(uint256(uint160(user)))] - 1;
+        uint256 userIndex = _rewards._keys._inner._positions[bytes32(uint256(uint160(user)))] - 1;
         uint256 subRootIndex;
         while (subRootIndex < subRoots.length() - 1 && userIndex >= subRootUserIndexStart[subRootIndex]) {
             ++subRootIndex;
         }
 
         uint256 indexStart = subRootIndex == 0 ? 0 : subRootUserIndexStart[subRootIndex - 1];
-        uint256 nLeaves = rewards.length() - indexStart;
+        uint256 nLeaves = _rewards.length() - indexStart;
         if (subRootIndex < subRoots.length() - 1) {
-            nLeaves -= rewards.length() - subRootUserIndexStart[subRootIndex];
+            nLeaves -= _rewards.length() - subRootUserIndexStart[subRootIndex];
         }
 
         bytes32[] memory hashes = new bytes32[](nLeaves);
         for (uint256 i = 0; i < hashes.length; i++) {
-            (address _user, uint256[] memory _rewardAmounts) = rewards.getUserAmountsAt(indexStart + i, rewardTokens);
+            (address _user, uint256[] memory _rewardAmounts) = _rewards.getUserAmountsAt(indexStart + i, rewardTokens);
             hashes[i] = keccak256(abi.encodePacked(_user, rewardTokens, _rewardAmounts));
         }
         bytes32[] memory subProof = genMerkleProof(hashes, userIndex - indexStart);

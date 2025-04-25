@@ -18,6 +18,9 @@ abstract contract RewardsUpdateTH is RewardsStorage {
     ConfigTH public config;
     uint64 public dataChainId; // chain id of the data source
 
+    // For each app ID and each epoch, tracks the last earner from the last proof segment.
+    mapping(uint8 => mapping(uint32 => address)) internal _lastEarnerOfLastSegment;
+
     // ----- internal functions -----
 
     function _initConfig(ConfigTH calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
@@ -54,13 +57,10 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
-        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal override {
-        _addRewards(
-            appId, epoch, appOutputWithoutAppIdEpoch, enumerable, numEarnersInProof, startEarnerIndex, endEarnerIndex
-        );
+        _addRewards(appId, epoch, appOutputWithoutAppIdEpoch, enumerable, startEarnerIndex, endEarnerIndex);
     }
 
     // parse circuit output, check and add new reward to total
@@ -70,14 +70,13 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
-        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal {
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
         uint256 sizePerEarner = _getSizePerEarner();
-        address lastEarnerOfLastProof = _lastEarnerOfLastProof[appId][epoch];
+        address lastEarner = _lastEarnerOfLastSegment[appId][epoch];
 
         for (uint256 earnerIndex = startEarnerIndex; earnerIndex <= endEarnerIndex; earnerIndex++) {
             uint256 offset = _getSizePerEarner() * earnerIndex;
@@ -85,14 +84,13 @@ abstract contract RewardsUpdateTH is RewardsStorage {
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
                 if (earnerIndex > 0) {
-                    _lastEarnerOfLastProof[appId][epoch] =
+                    _lastEarnerOfLastSegment[appId][epoch] =
                         address(bytes20(appOutputWithoutAppIdEpoch[offset - sizePerEarner:offset - sizePerEarner + 20]));
                 }
                 break;
             }
-            if (earnerIndex == 0) {
-                require(lastEarnerOfLastProof < earner, "earner addresses not sorted");
-            }
+            require(lastEarner < earner, "earner addresses not sorted");
+            lastEarner = earner;
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i++) {
                 uint256 amount =
@@ -101,8 +99,8 @@ abstract contract RewardsUpdateTH is RewardsStorage {
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
             }
-            if (earnerIndex == numEarnersInProof - 1) {
-                _lastEarnerOfLastProof[appId][epoch] = earner;
+            if (earnerIndex == endEarnerIndex) {
+                _lastEarnerOfLastSegment[appId][epoch] = earner;
             }
             emit RewardsAdded(appId, epoch, earner, newRewards);
         }

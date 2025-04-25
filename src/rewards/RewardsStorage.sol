@@ -25,6 +25,8 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
     event VkUpdated(uint8 appId, bytes32 vk);
 
+    // ----- external fields -----
+
     // 82531167a8e1b9df58acc5f105c04f72009b9ff406bf7d722b527a2f45d626ae
     bytes32 public constant REWARD_UPDATER_ROLE = keccak256("reward_updater");
 
@@ -33,17 +35,15 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     // token -> total rewards
     mapping(address => uint256) public tokenCumulativeRewards;
 
-    // proof ID -> last processed count in proof
-    mapping(bytes32 => uint256) proofLastProcessedEarnerCount;
-
     mapping(uint8 => bytes32) public vkMap; // from app ID to vkHash
+
+    // ----- internal fields -----
 
     // user -> token -> cumulative rewards
     EnumerableMap.UserTokenAmountMap internal _rewards;
 
-    // For each app ID and each epoch, tracks the last earner from the last proof.
-    // The contract assumes the earner addresses are unique and sorted by ascending order by the circuits.
-    mapping(uint8 => mapping(uint32 => address)) internal _lastEarnerOfLastProof;
+    // proof ID -> last processed count in proof
+    mapping(bytes32 => uint256) internal _proofLastProcessedEarnerCount;
 
     // ----- external functions -----
 
@@ -77,7 +77,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         onlyRole(REWARD_UPDATER_ROLE)
     {
         (bytes32 proofId, uint8 appId) = _checkProofAndGetAppId(proof, appOutput);
-        uint256 lastProcessedEarnerCount = proofLastProcessedEarnerCount[proofId];
+        uint256 lastProcessedEarnerCount = _proofLastProcessedEarnerCount[proofId];
         uint32 epoch = uint32(bytes4(appOutput[1:5]));
 
         bytes calldata appOutputWithoutAppIdEpoch = appOutput[5:];
@@ -88,17 +88,9 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         // Use inclusive start and end indices
         uint256 startEarnerIndex = lastProcessedEarnerCount;
         uint256 endEarnerIndex = lastProcessedEarnerCount + numToProcess - 1;
-        _updateRewards(
-            appId,
-            epoch,
-            appOutputWithoutAppIdEpoch,
-            _useEnumerableMap(),
-            numEarnersInProof,
-            startEarnerIndex,
-            endEarnerIndex
-        );
+        _updateRewards(appId, epoch, appOutputWithoutAppIdEpoch, _useEnumerableMap(), startEarnerIndex, endEarnerIndex);
 
-        proofLastProcessedEarnerCount[proofId] = endEarnerIndex + 1;
+        _proofLastProcessedEarnerCount[proofId] = endEarnerIndex + 1;
         emit ProofSegmentProcessed(proofId, epoch, batchIndex, startEarnerIndex, endEarnerIndex);
         if (endEarnerIndex == numEarnersInProof - 1) {
             emit ProofProcessed(proofId, epoch, batchIndex);
@@ -135,7 +127,6 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
-        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal virtual;
