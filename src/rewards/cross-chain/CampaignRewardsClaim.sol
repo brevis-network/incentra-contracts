@@ -73,16 +73,19 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     }
 
     // claim reward, send erc20 to earner
-    function claim(address earner, uint256[] memory cumulativeAmounts, uint64 _epoch, bytes32[] memory proof)
+    function claim(address earner, uint256[] calldata cumulativeAmounts, uint64 _epoch, bytes32[] calldata proof)
         external
     {
         _claim(earner, earner, cumulativeAmounts, _epoch, proof);
     }
 
     // msg.sender is the earner
-    function claimWithRecipient(address to, uint256[] memory cumulativeAmounts, uint64 _epoch, bytes32[] memory proof)
-        external
-    {
+    function claimWithRecipient(
+        address to,
+        uint256[] calldata cumulativeAmounts,
+        uint64 _epoch,
+        bytes32[] calldata proof
+    ) external {
         _claim(msg.sender, to, cumulativeAmounts, _epoch, proof);
     }
 
