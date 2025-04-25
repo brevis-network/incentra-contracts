@@ -35,7 +35,7 @@ abstract contract RewardsClaim is RewardsStorage {
         AddrAmt[] memory ret = new AddrAmt[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            uint256 tosend = rewards.get(earner, token) - claimed[earner][token];
+            uint256 tosend = _rewards.get(earner, token) - claimed[earner][token];
             ret[i] = AddrAmt({token: token, amount: tosend});
         }
         return ret;
@@ -48,7 +48,7 @@ abstract contract RewardsClaim is RewardsStorage {
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            uint256 cumulativeAmount = rewards.get(earner, token);
+            uint256 cumulativeAmount = _rewards.get(earner, token);
             uint256 tosend = cumulativeAmount - claimed[earner][token];
             claimed[earner][token] = cumulativeAmount;
             // send token

@@ -18,6 +18,9 @@ abstract contract RewardsUpdateTH is RewardsStorage {
     ConfigTH public config;
     uint64 public dataChainId; // chain id of the data source
 
+    // For each app ID and each epoch, tracks the last earner from the last proof segment.
+    mapping(uint8 => mapping(uint32 => address)) internal _lastEarnerOfLastSegment;
+
     // ----- internal functions -----
 
     function _initConfig(ConfigTH calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
@@ -72,26 +75,29 @@ abstract contract RewardsUpdateTH is RewardsStorage {
     ) internal {
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
+        address lastEarner = _lastEarnerOfLastSegment[appId][epoch];
 
         for (uint256 earnerIndex = startEarnerIndex; earnerIndex <= endEarnerIndex; earnerIndex++) {
             uint256 offset = _getSizePerEarner() * earnerIndex;
-            address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:offset + 20]));
+            address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:(offset + 20)]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
                 break;
             }
-            require(epoch > lastEpoch[earner], "invalid epoch");
-            lastEpoch[earner] = epoch;
+            require(lastEarner < earner, "earner addresses not sorted");
+            lastEarner = earner;
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i++) {
                 uint256 amount =
-                    uint128(bytes16(appOutputWithoutAppIdEpoch[offset + 20 + 16 * i:offset + 20 + 16 * i + 16]));
-                rewards.add(earner, tokens[i], amount, enumerable);
+                    uint128(bytes16(appOutputWithoutAppIdEpoch[(offset + 20 + 16 * i):(offset + 20 + 16 * i + 16)]));
+                _rewards.add(earner, tokens[i], amount, enumerable);
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
             }
             emit RewardsAdded(appId, epoch, earner, newRewards);
         }
+        _lastEarnerOfLastSegment[appId][epoch] = lastEarner;
+
         for (uint256 i = 0; i < numTokens; i += 1) {
             tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
