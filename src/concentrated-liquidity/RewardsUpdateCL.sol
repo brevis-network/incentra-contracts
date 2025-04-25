@@ -75,15 +75,32 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
+        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal override {
         require(appId > 1, "invalid app id");
         if (appId == 2) {
-            _addDirectRewards(appId, epoch, appOutputWithoutAppIdEpoch, enumerable, startEarnerIndex, endEarnerIndex);
+            _addDirectRewards(
+                appId,
+                epoch,
+                appOutputWithoutAppIdEpoch,
+                enumerable,
+                numEarnersInProof,
+                startEarnerIndex,
+                endEarnerIndex
+            );
         } else {
             // indirect rewards
-            _addIndirectRewards(appId, epoch, appOutputWithoutAppIdEpoch, enumerable, startEarnerIndex, endEarnerIndex);
+            _addIndirectRewards(
+                appId,
+                epoch,
+                appOutputWithoutAppIdEpoch,
+                enumerable,
+                numEarnersInProof,
+                startEarnerIndex,
+                endEarnerIndex
+            );
         }
     }
 
@@ -94,6 +111,7 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
+        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal {
@@ -106,22 +124,33 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
         uint256 headerSize = _getHeaderSize(appId);
+        uint256 sizePerEarner = _getSizePerEarner();
+        address lastEarnerOfLastProof = _lastEarnerOfLastProof[appId][epoch];
+
         for (uint256 earnerIndex = startEarnerIndex; earnerIndex <= endEarnerIndex; earnerIndex++) {
-            uint256 offset = headerSize + _getSizePerEarner() * earnerIndex;
+            uint256 offset = headerSize + sizePerEarner * earnerIndex;
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:offset + 20]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
+                if (earnerIndex > 0) {
+                    _lastEarnerOfLastProof[appId][epoch] =
+                        address(bytes20(appOutputWithoutAppIdEpoch[offset - sizePerEarner:offset - sizePerEarner + 20]));
+                }
                 break;
             }
-            require(epoch > lastEpoch[earner], "invalid epoch");
-            lastEpoch[earner] = epoch;
+            if (earnerIndex == 0) {
+                require(lastEarnerOfLastProof < earner, "earner addresses not sorted");
+            }
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount =
                     uint128(bytes16(appOutputWithoutAppIdEpoch[offset + 20 + 16 * i:offset + 20 + 16 * i + 16]));
-                rewards.add(earner, tokens[i], amount, enumerable);
+                _rewards.add(earner, tokens[i], amount, enumerable);
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
+            }
+            if (earnerIndex == numEarnersInProof - 1) {
+                _lastEarnerOfLastProof[appId][epoch] = earner;
             }
             emit RewardsAdded(appId, epoch, earner, newRewards);
         }
@@ -136,34 +165,40 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
+        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal {
-        address indirect = address(bytes20(appOutputWithoutAppIdEpoch[0:20]));
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
         uint256 headerSize = _getHeaderSize(appId);
+        uint256 sizePerEarner = _getSizePerEarner();
+        address lastEarnerOfLastProof = _lastEarnerOfLastProof[appId][epoch];
+
         for (uint256 earnerIndex = startEarnerIndex; earnerIndex <= endEarnerIndex; earnerIndex++) {
-            uint256 offset = headerSize + _getSizePerEarner() * earnerIndex;
+            uint256 offset = headerSize + sizePerEarner * earnerIndex;
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:offset + 20]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
+                if (earnerIndex > 0) {
+                    _lastEarnerOfLastProof[appId][epoch] =
+                        address(bytes20(appOutputWithoutAppIdEpoch[offset - sizePerEarner:offset - sizePerEarner + 20]));
+                }
                 break;
             }
-            require(epoch > indirectEpoch[indirect][earner], "invalid epoch");
-            indirectEpoch[indirect][earner] = epoch;
-            require(epoch >= lastEpoch[earner], "indirect epoch is smaller than epoch");
-            if (epoch > lastEpoch[earner]) {
-                // update lastEpoch to enforce indirect must be submitted after main
-                lastEpoch[earner] = epoch;
+            if (earnerIndex == 0) {
+                require(lastEarnerOfLastProof < earner, "earner addresses not sorted");
             }
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
                 uint256 amount =
                     uint128(bytes16(appOutputWithoutAppIdEpoch[offset + 20 + 16 * i:offset + 20 + 16 * i + 16]));
-                rewards.add(earner, tokens[i], amount, enumerable);
+                _rewards.add(earner, tokens[i], amount, enumerable);
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
+            }
+            if (earnerIndex == numEarnersInProof - 1) {
+                _lastEarnerOfLastProof[appId][epoch] = earner;
             }
             emit RewardsAdded(appId, epoch, earner, newRewards);
         }

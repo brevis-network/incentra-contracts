@@ -54,10 +54,13 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
+        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal override {
-        _addRewards(appId, epoch, appOutputWithoutAppIdEpoch, enumerable, startEarnerIndex, endEarnerIndex);
+        _addRewards(
+            appId, epoch, appOutputWithoutAppIdEpoch, enumerable, numEarnersInProof, startEarnerIndex, endEarnerIndex
+        );
     }
 
     // parse circuit output, check and add new reward to total
@@ -67,28 +70,39 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
+        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal {
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
+        uint256 sizePerEarner = _getSizePerEarner();
+        address lastEarnerOfLastProof = _lastEarnerOfLastProof[appId][epoch];
 
         for (uint256 earnerIndex = startEarnerIndex; earnerIndex <= endEarnerIndex; earnerIndex++) {
             uint256 offset = _getSizePerEarner() * earnerIndex;
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:offset + 20]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
+                if (earnerIndex > 0) {
+                    _lastEarnerOfLastProof[appId][epoch] =
+                        address(bytes20(appOutputWithoutAppIdEpoch[offset - sizePerEarner:offset - sizePerEarner + 20]));
+                }
                 break;
             }
-            require(epoch > lastEpoch[earner], "invalid epoch");
-            lastEpoch[earner] = epoch;
+            if (earnerIndex == 0) {
+                require(lastEarnerOfLastProof < earner, "earner addresses not sorted");
+            }
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i++) {
                 uint256 amount =
                     uint128(bytes16(appOutputWithoutAppIdEpoch[offset + 20 + 16 * i:offset + 20 + 16 * i + 16]));
-                rewards.add(earner, tokens[i], amount, enumerable);
+                _rewards.add(earner, tokens[i], amount, enumerable);
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
+            }
+            if (earnerIndex == numEarnersInProof - 1) {
+                _lastEarnerOfLastProof[appId][epoch] = earner;
             }
             emit RewardsAdded(appId, epoch, earner, newRewards);
         }

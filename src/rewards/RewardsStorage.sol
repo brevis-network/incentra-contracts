@@ -14,27 +14,6 @@ struct AddrAmt {
 abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    // 82531167a8e1b9df58acc5f105c04f72009b9ff406bf7d722b527a2f45d626ae
-    bytes32 public constant REWARD_UPDATER_ROLE = keccak256("reward_updater");
-
-    address[] public tokens; // addr list of reward tokens
-    // user -> token -> cumulative rewards
-    EnumerableMap.UserTokenAmountMap internal rewards;
-
-    // token -> total rewards
-    mapping(address => uint256) public tokenCumulativeRewards;
-
-    // user -> last attested epoch
-    mapping(address => uint32) public lastEpoch;
-    // user may opt-in to other projects to earn more rewards
-    // indirect contract -> user -> last attested epoch to avoid replay
-    mapping(address => mapping(address => uint32)) public indirectEpoch;
-
-    // proof ID -> last processed count in proof
-    mapping(bytes32 => uint256) proofLastProcessedEarnerCount;
-
-    mapping(uint8 => bytes32) public vkMap; // from app ID to vkHash
-
     event RewardsAdded(uint8 indexed appId, uint32 indexed epoch, address indexed user, uint256[] newRewards);
     event ProofSegmentProcessed(
         bytes32 indexed proofId,
@@ -45,6 +24,26 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     );
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
     event VkUpdated(uint8 appId, bytes32 vk);
+
+    // 82531167a8e1b9df58acc5f105c04f72009b9ff406bf7d722b527a2f45d626ae
+    bytes32 public constant REWARD_UPDATER_ROLE = keccak256("reward_updater");
+
+    address[] public tokens; // addr list of reward tokens
+
+    // token -> total rewards
+    mapping(address => uint256) public tokenCumulativeRewards;
+
+    // proof ID -> last processed count in proof
+    mapping(bytes32 => uint256) proofLastProcessedEarnerCount;
+
+    mapping(uint8 => bytes32) public vkMap; // from app ID to vkHash
+
+    // user -> token -> cumulative rewards
+    EnumerableMap.UserTokenAmountMap internal _rewards;
+
+    // For each app ID and each epoch, tracks the last earner from the last proof.
+    // The contract assumes the earner addresses are unique and sorted by ascending order by the circuits.
+    mapping(uint8 => mapping(uint32 => address)) internal _lastEarnerOfLastProof;
 
     // ----- external functions -----
 
@@ -58,19 +57,19 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     }
 
     function getRewardAmount(address user, address token) public view returns (uint256) {
-        return rewards.get(user, token);
+        return _rewards.get(user, token);
     }
 
     function viewTotalRewards(address user) external view returns (AddrAmt[] memory) {
         AddrAmt[] memory ret = new AddrAmt[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            ret[i] = AddrAmt({token: tokens[i], amount: rewards.get(user, tokens[i])});
+            ret[i] = AddrAmt({token: tokens[i], amount: _rewards.get(user, tokens[i])});
         }
         return ret;
     }
 
     function getRewardsLength() external view returns (uint64) {
-        return uint64(rewards.length());
+        return uint64(_rewards.length());
     }
 
     function updateRewards(bytes calldata proof, bytes calldata appOutput, uint32 batchIndex, uint256 maxNumToProcess)
@@ -89,7 +88,15 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         // Use inclusive start and end indices
         uint256 startEarnerIndex = lastProcessedEarnerCount;
         uint256 endEarnerIndex = lastProcessedEarnerCount + numToProcess - 1;
-        _updateRewards(appId, epoch, appOutputWithoutAppIdEpoch, _useEnumerableMap(), startEarnerIndex, endEarnerIndex);
+        _updateRewards(
+            appId,
+            epoch,
+            appOutputWithoutAppIdEpoch,
+            _useEnumerableMap(),
+            numEarnersInProof,
+            startEarnerIndex,
+            endEarnerIndex
+        );
 
         proofLastProcessedEarnerCount[proofId] = endEarnerIndex + 1;
         emit ProofSegmentProcessed(proofId, epoch, batchIndex, startEarnerIndex, endEarnerIndex);
@@ -128,6 +135,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint32 epoch,
         bytes calldata appOutputWithoutAppIdEpoch,
         bool enumerable,
+        uint256 numEarnersInProof,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal virtual;
