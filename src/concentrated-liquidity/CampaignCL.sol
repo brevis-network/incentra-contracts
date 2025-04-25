@@ -4,13 +4,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../brevis/BrevisProofApp.sol";
-import "../lib/EnumerableMap.sol";
 import "../rewards/same-chain/RewardsClaim.sol";
 import "./RewardsUpdateCL.sol";
 
 // submit and claim campaign rewards on a same chain
-contract CampaignCL is BrevisProofApp, RewardsUpdateCL, RewardsClaim {
+contract CampaignCL is RewardsUpdateCL, RewardsClaim {
     using SafeERC20 for IERC20;
 
     uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end

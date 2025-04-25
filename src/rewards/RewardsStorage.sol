@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../access/AccessControl.sol";
 import "../brevis/BrevisProofApp.sol";
 import "../lib/EnumerableMap.sol";

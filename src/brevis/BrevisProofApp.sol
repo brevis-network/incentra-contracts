@@ -21,6 +21,7 @@ abstract contract BrevisProofApp {
         internal
         returns (bytes32 proofId)
     {
+        // TODO: Move this logic to BrevisProof
         ProofData memory data = _unpackProofData(_proof);
         proofId = keccak256(abi.encodePacked(data.appVkHash, data.commitHash, data.appCommitHash));
         // Skip proof submission if already verified by BrevisProof

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../brevis/BrevisProofApp.sol";
 import "../rewards/cross-chain/RewardsMerkle.sol";
 import "./RewardsUpdateCL.sol";
 
 // submit campaign rewards on one chain, which will be claimed on another chain
-contract RewardsSubmissionCL is BrevisProofApp, RewardsUpdateCL, RewardsMerkle {
+contract RewardsSubmissionCL is RewardsUpdateCL, RewardsMerkle {
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(
         ConfigCL calldata cfg,
