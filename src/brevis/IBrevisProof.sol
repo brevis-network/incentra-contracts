@@ -10,6 +10,8 @@ interface IBrevisProof {
         bytes32 dummyInputCommitment;
     }
 
+    function proofs(bytes32 _proofId) external view returns (bytes32);
+
     function submitProof(uint64 _chainId, bytes calldata _proofWithPubInputs)
         external
         returns (bytes32 proofId, bytes32 appCommitHash, bytes32 appVkHash);

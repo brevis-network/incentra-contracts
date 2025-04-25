@@ -7,12 +7,19 @@ import "./IBrevisProof.sol";
 abstract contract BrevisProofApp {
     IBrevisProof public brevisProof;
 
+    uint32 constant PUBLIC_BYTES_START_IDX = 11 * 32; // the first 10 32bytes are groth16 proof (A/B/C/Commitment), the 11th 32bytes is cPub
+
     function _checkBrevisProof(uint64 _chainId, bytes calldata _proof, bytes calldata _appOutput, bytes32 _appVkHash)
         internal
+        returns (bytes32 proofId)
     {
-        (, bytes32 appCommitHash, bytes32 appVkHash) = brevisProof.submitProof(_chainId, _proof);
-        require(appVkHash == _appVkHash, "mismatch vkhash");
+        // BrevisProof will skip verification if already verified.
+        bytes32 appCommitHash;
+        bytes32 appVkHash;
+        (proofId, appCommitHash, appVkHash) = brevisProof.submitProof(_chainId, _proof);
+        require(appVkHash == _appVkHash, "vkHash mismatch");
         require(appCommitHash == keccak256(_appOutput), "invalid circuit output");
+        return proofId;
     }
 
     function _checkBrevisAggProof(

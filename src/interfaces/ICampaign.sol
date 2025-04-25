@@ -4,7 +4,8 @@ pragma solidity ^0.8.20;
 // generic interface for incentra backend to interact with the campaign contract
 // each campaign contract may only implement a subset of the functions
 interface ICampaign {
-    function updateRewards(bytes calldata proof, bytes calldata appOutput, uint32 batchIndex) external;
+    function updateRewards(bytes calldata proof, bytes calldata appOutput, uint32 batchIndex, uint256 maxNumToProcess)
+        external;
 
     function updateTotalFee(bytes calldata proof, bytes calldata appOutput) external;
 
@@ -12,7 +13,7 @@ interface ICampaign {
 
     // --------- cross-chain related ---------
 
-    // --- rewrads submission contract ---
+    // --- rewards submission contract ---
 
     function startEpoch(uint64 epoch) external;
 

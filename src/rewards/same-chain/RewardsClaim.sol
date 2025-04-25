@@ -19,6 +19,30 @@ abstract contract RewardsClaim is RewardsStorage {
 
     event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
 
+    // ----- external functions -----
+
+    // claim reward, send erc20 to earner
+    function claim(address earner) external {
+        _claim(earner, earner);
+    }
+
+    // msg.sender is the earner
+    function claimWithRecipient(address to) external {
+        _claim(msg.sender, to);
+    }
+
+    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            uint256 tosend = rewards.get(earner, token) - claimed[earner][token];
+            ret[i] = AddrAmt({token: token, amount: tosend});
+        }
+        return ret;
+    }
+
+    // ----- internal functions -----
+
     function _claim(address earner, address to) internal {
         uint256[] memory claimedRewards = new uint256[](tokens.length);
         bool hasUnclaimed = false;
@@ -37,15 +61,5 @@ abstract contract RewardsClaim is RewardsStorage {
         }
         require(hasUnclaimed, "no unclaimed rewards");
         emit RewardsClaimed(earner, claimedRewards);
-    }
-
-    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
-        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            uint256 tosend = rewards.get(earner, token) - claimed[earner][token];
-            ret[i] = AddrAmt({token: token, amount: tosend});
-        }
-        return ret;
     }
 }
