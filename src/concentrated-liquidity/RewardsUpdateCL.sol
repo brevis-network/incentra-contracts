@@ -123,8 +123,8 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
             lastEarner = earner;
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
-                uint256 amount =
-                    uint128(bytes16(appOutputWithoutAppIdEpoch[(offset + 20 + 16 * i):(offset + 20 + 16 * i + 16)]));
+                uint256 amtPos = offset + 20 + 16 * i;
+                uint256 amount = uint128(bytes16(appOutputWithoutAppIdEpoch[amtPos:(amtPos + 16)]));
                 _rewards.add(earner, tokens[i], amount, enumerable);
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
@@ -164,8 +164,8 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
             lastEarner = earner;
             uint256[] memory newRewards = new uint256[](numTokens);
             for (uint256 i = 0; i < numTokens; i += 1) {
-                uint256 amount =
-                    uint128(bytes16(appOutputWithoutAppIdEpoch[(offset + 20 + 16 * i):(offset + 20 + 16 * i + 16)]));
+                uint256 amtPos = offset + 20 + 16 * i;
+                uint256 amount = uint128(bytes16(appOutputWithoutAppIdEpoch[amtPos:(amtPos + 16)]));
                 _rewards.add(earner, tokens[i], amount, enumerable);
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
