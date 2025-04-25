@@ -129,7 +129,6 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
                 newTokenRewards[i] += amount;
                 newRewards[i] = amount;
             }
-            if (earnerIndex == endEarnerIndex) {}
             emit RewardsAdded(appId, epoch, earner, newRewards);
         }
         _lastDirectEarnerOfLastSegment[appId][epoch] = lastEarner;
