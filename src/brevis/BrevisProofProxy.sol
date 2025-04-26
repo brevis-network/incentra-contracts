@@ -57,6 +57,14 @@ contract BrevisProofProxy is AccessControl {
         }
     }
 
+    function addAdmin(address _admin) external onlyOwner {
+        _grantRole(ADMIN_ROLE, _admin);
+    }
+
+    function removeAdmin(address _admin) external onlyOwner {
+        _revokeRole(ADMIN_ROLE, _admin);
+    }
+
     function setBrevisProof(address _brevisProof) external onlyOwner {
         address oldAddr = address(brevisProof);
         brevisProof = IBrevisProof(_brevisProof);
