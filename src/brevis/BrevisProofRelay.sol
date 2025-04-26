@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import "./IBrevisProof.sol";
 import "../access/AccessControl.sol";
 
-contract BrevisProofProxy is AccessControl {
+contract BrevisProofRelay is AccessControl {
     IBrevisProof public brevisProof;
 
     // 589d473ba17c0f47d494622893831497bad25919b9afb8e33e9521b8963fccde
