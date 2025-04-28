@@ -121,7 +121,8 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:(offset + 20)]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
-                return true;
+                allEarnersProcessed = true;
+                break;
             }
             require(lastEarner < earner, "earner addresses not sorted");
             lastEarner = earner;
@@ -140,7 +141,7 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         for (uint256 i = 0; i < numTokens; i += 1) {
             tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
-        return false;
+        return allEarnersProcessed;
     }
 
     // appOutputWithoutAppIdEpoch is epoch, indirect contract, [usr,amt1,amt2..]
@@ -163,7 +164,8 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:(offset + 20)]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
-                return true;
+                allEarnersProcessed = true;
+                break;
             }
             require(lastEarner < earner, "earner addresses not sorted");
             lastEarner = earner;
@@ -182,6 +184,6 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         for (uint256 i = 0; i < numTokens; i += 1) {
             tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
-        return false;
+        return allEarnersProcessed;
     }
 }

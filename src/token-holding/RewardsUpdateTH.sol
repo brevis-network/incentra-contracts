@@ -82,7 +82,8 @@ abstract contract RewardsUpdateTH is RewardsStorage {
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:(offset + 20)]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
-                return true;
+                allEarnersProcessed = true;
+                break;
             }
             require(lastEarner < earner, "earner addresses not sorted");
             lastEarner = earner;
@@ -101,6 +102,6 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         for (uint256 i = 0; i < numTokens; i += 1) {
             tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
-        return false;
+        return allEarnersProcessed;
     }
 }
