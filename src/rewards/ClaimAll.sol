@@ -10,14 +10,14 @@ contract ClaimAll {
         bytes32[] proof;
     }
 
-    // claim all same-chain reawrds
+    // claim all same-chain rewards
     function claimAll(address earner, address[] calldata campaignAddrs) public {
         for (uint256 i = 0; i < campaignAddrs.length; i++) {
             IRewardContract(campaignAddrs[i]).claim(earner);
         }
     }
 
-    // claim all cross-chain reawrds
+    // claim all cross-chain rewards
     function claimAll(address earner, CampaignReward[] calldata campaignRewards) public {
         for (uint256 i = 0; i < campaignRewards.length; i++) {
             IRewardContract(campaignRewards[i].campaignAddr).claim(

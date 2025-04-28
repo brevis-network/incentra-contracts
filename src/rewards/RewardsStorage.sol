@@ -88,8 +88,11 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         // Use inclusive start and end indices
         uint256 startEarnerIndex = lastProcessedEarnerCount;
         uint256 endEarnerIndex = lastProcessedEarnerCount + numToProcess - 1;
-        _updateRewards(appId, epoch, appOutputWithoutAppIdEpoch, _useEnumerableMap(), startEarnerIndex, endEarnerIndex);
+        bool allEarnersProcessed = _updateRewards(
+            appId, epoch, appOutputWithoutAppIdEpoch, _useEnumerableMap(), startEarnerIndex, endEarnerIndex
+        );
 
+        if (allEarnersProcessed) endEarnerIndex = numEarnersInProof - 1;
         _proofLastProcessedEarnerCount[proofId] = endEarnerIndex + 1;
         emit ProofSegmentProcessed(proofId, epoch, batchIndex, startEarnerIndex, endEarnerIndex);
         if (endEarnerIndex == numEarnersInProof - 1) {
@@ -129,5 +132,5 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         bool enumerable,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
-    ) internal virtual;
+    ) internal virtual returns (bool allEarnersProcessed);
 }

@@ -59,8 +59,8 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         bool enumerable,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
-    ) internal override {
-        _addRewards(appId, epoch, appOutputWithoutAppIdEpoch, enumerable, startEarnerIndex, endEarnerIndex);
+    ) internal override returns (bool allEarnersProcessed) {
+        return _addRewards(appId, epoch, appOutputWithoutAppIdEpoch, enumerable, startEarnerIndex, endEarnerIndex);
     }
 
     // parse circuit output, check and add new reward to total
@@ -72,7 +72,7 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         bool enumerable,
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
-    ) internal {
+    ) internal returns (bool allEarnersProcessed) {
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
         address lastEarner = _lastEarnerOfLastSegment[appId][epoch];
@@ -82,7 +82,7 @@ abstract contract RewardsUpdateTH is RewardsStorage {
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:(offset + 20)]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {
-                break;
+                return true;
             }
             require(lastEarner < earner, "earner addresses not sorted");
             lastEarner = earner;
@@ -101,5 +101,6 @@ abstract contract RewardsUpdateTH is RewardsStorage {
         for (uint256 i = 0; i < numTokens; i += 1) {
             tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
+        return false;
     }
 }
