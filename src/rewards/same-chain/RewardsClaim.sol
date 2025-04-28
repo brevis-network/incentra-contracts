@@ -17,7 +17,11 @@ abstract contract RewardsClaim is RewardsStorage {
     // token -> total claimed amount
     mapping(address => uint256) public tokenClaimedRewards;
 
+    // seconds after campaign end, after which all remaining balance can be refunded to creator
+    uint64 public gracePeriod = 3600 * 24 * 180; // default 180 days
+
     event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
+    event GracePeriodUpdated(uint64 gracePeriod);
 
     // ----- external functions -----
 
@@ -39,6 +43,11 @@ abstract contract RewardsClaim is RewardsStorage {
             ret[i] = AddrAmt({token: token, amount: tosend});
         }
         return ret;
+    }
+
+    function setGracePeriod(uint64 _gracePeriod) external onlyOwner {
+        gracePeriod = _gracePeriod;
+        emit GracePeriodUpdated(_gracePeriod);
     }
 
     // ----- internal functions -----

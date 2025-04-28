@@ -27,7 +27,8 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     // e844ed9e40aeb388cb97d2ef796e81de635718f440751efb46753791698f6bde
     bytes32 public constant ROOT_UPDATER_ROLE = keccak256("root_updater");
 
-    uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
+    // seconds after campaign end, after which all remaining balance can be refunded to creator
+    uint64 public gracePeriod = 3600 * 24 * 180; // default 180 days
     Config public config;
 
     // user -> token -> claimed amount
@@ -43,8 +44,9 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
 
     event TopRootUpdated(uint64 indexed epoch, bytes32 topRoot);
     event RewardsClaimed(address indexed earner, uint256[] newAmount, uint256[] cumulativeAmounts);
-    event MessageBusSet(address messageBus);
-    event SubmissionContractSet(uint64 submissionChainId, address submissionAddress);
+    event GracePeriodUpdated(uint64 gracePeriod);
+    event MessageBusUpdated(address messageBus);
+    event SubmissionContractUpdated(uint64 submissionChainId, address submissionAddress);
 
     function init(
         Config calldata cfg,
@@ -65,7 +67,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     // after grace period, refund all remaining balance to creator
     function refund() external {
         Config memory cfg = config;
-        require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
+        require(block.timestamp > cfg.startTime + cfg.duration + gracePeriod, "too soon");
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address token = cfg.rewards[i].token;
             IERC20(token).safeTransfer(cfg.creator, IERC20(token).balanceOf(address(this)));
@@ -128,12 +130,17 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
         submissionChainId = _submissionChainId;
         submissionAddress = _submissionAddress;
-        emit SubmissionContractSet(_submissionChainId, _submissionAddress);
+        emit SubmissionContractUpdated(_submissionChainId, _submissionAddress);
     }
 
     function setMessageBus(address _messageBus) external onlyOwner {
         messageBus = _messageBus;
-        emit MessageBusSet(_messageBus);
+        emit MessageBusUpdated(_messageBus);
+    }
+
+    function setGracePeriod(uint64 _gracePeriod) external onlyOwner {
+        gracePeriod = _gracePeriod;
+        emit GracePeriodUpdated(_gracePeriod);
     }
 
     // ------------------------------------------
