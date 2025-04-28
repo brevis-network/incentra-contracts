@@ -40,7 +40,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     event AllSubRootsGenerated(uint64 indexed epoch);
     event TopRootGenerated(uint64 indexed epoch, bytes32 topRoot);
     event TopRootSent(uint64 indexed epoch, bytes32 topRoot, address receiver, uint64 dstChainId);
-    event MessageBusSet(address messageBus);
+    event MessageBusUpdated(address messageBus);
 
     // ----------- state transition -----------
     function startEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
@@ -180,7 +180,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     function setMessageBus(address _messageBus) external onlyOwner {
         require(_messageBus != address(0), "invalid message bus");
         messageBus = _messageBus;
-        emit MessageBusSet(_messageBus);
+        emit MessageBusUpdated(_messageBus);
     }
 
     // ----------- Private Functions -----------

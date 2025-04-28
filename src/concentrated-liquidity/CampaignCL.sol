@@ -11,8 +11,6 @@ import "./RewardsUpdateCL.sol";
 contract CampaignCL is RewardsUpdateCL, RewardsClaim {
     using SafeERC20 for IERC20;
 
-    uint64 public constant GRACE_PERIOD = 3600 * 24 * 10; // seconds after campaign end
-
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(
         ConfigCL calldata cfg,
@@ -32,7 +30,7 @@ contract CampaignCL is RewardsUpdateCL, RewardsClaim {
     // after grace period, refund all remaining balance to creator
     function refund() external {
         ConfigCL memory cfg = config;
-        require(block.timestamp > cfg.startTime + cfg.duration + GRACE_PERIOD, "too soon");
+        require(block.timestamp > cfg.startTime + cfg.duration + gracePeriod, "too soon");
         for (uint256 i = 0; i < cfg.rewards.length; i++) {
             address erc20 = cfg.rewards[i].token;
             IERC20(erc20).safeTransfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
