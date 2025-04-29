@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "../lib/EnumerableMap.sol";
 import "../rewards/RewardsStorage.sol";
 
-struct ConfigTH {
+struct ConfigGeneric {
     address creator;
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
@@ -12,10 +12,10 @@ struct ConfigTH {
     address erc20; // which erc20 is used for token holding
 }
 
-abstract contract RewardsUpdateTH is RewardsStorage {
+abstract contract RewardsUpdateGeneric is RewardsStorage {
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
-    ConfigTH public config;
+    ConfigGeneric public config;
     uint64 public dataChainId; // chain id of the data source
 
     // For each app ID and each epoch, tracks the last earner from the last proof segment.
@@ -23,7 +23,7 @@ abstract contract RewardsUpdateTH is RewardsStorage {
 
     // ----- internal functions -----
 
-    function _initConfig(ConfigTH calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
+    function _initConfig(ConfigGeneric calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
         internal
     {
         brevisProof = _brevisProof;
