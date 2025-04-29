@@ -77,18 +77,7 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal returns (bool allEarnersProcessed) {
-        bytes32[] memory extraData = config.extraData;
-        for (uint256 i = 0; i < extraData.length; i++) {
-            require(
-                extraData[i] == bytes32(appOutputWithoutAppIdEpoch[(0 + i * 32):(0 + i * 32 + 32)]),
-                string.concat(
-                    string.concat(
-                        string.concat("invalid extra data, want ", Strings.toHexString(uint256(extraData[i]))), ", got "
-                    ),
-                    Strings.toHexString(uint256(bytes32(appOutputWithoutAppIdEpoch[(0 + i * 32):(0 + i * 32 + 32)])))
-                )
-            );
-        }
+        checkExtraData(appOutputWithoutAppIdEpoch);
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
         address lastEarner = _lastEarnerOfLastSegment[appId][epoch];
@@ -119,5 +108,20 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
             tokenCumulativeRewards[tokens[i]] += newTokenRewards[i];
         }
         return allEarnersProcessed;
+    }
+
+    function checkExtraData(bytes calldata appOutputWithoutAppIdEpoch) private view {
+        bytes32[] memory extraData = config.extraData;
+        for (uint256 i = 0; i < extraData.length; i++) {
+            require(
+                extraData[i] == bytes32(appOutputWithoutAppIdEpoch[(0 + i * 32):(0 + i * 32 + 32)]),
+                string.concat(
+                    string.concat(
+                        string.concat("invalid extra data, want ", Strings.toHexString(uint256(extraData[i]))), ", got "
+                    ),
+                    Strings.toHexString(uint256(bytes32(appOutputWithoutAppIdEpoch[(0 + i * 32):(0 + i * 32 + 32)])))
+                )
+            );
+        }
     }
 }
