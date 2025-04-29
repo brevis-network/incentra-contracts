@@ -7,7 +7,7 @@
 Main contracts: `CampaignXX.sol`, examples:
 
 - [`CampaignCL.sol`](./src/concentrated-liquidity/CampaignCL.sol): concentrated liquidity campaign
-- [`CampaignGeneric.sol`](./src/generic/CampaignGeneric.sol): token holding campaign
+- [`CampaignGeneric.sol`](./src/generic/CampaignGeneric.sol): generic reward campaign
 
 ### Cross-chain reward submission and claim
 
