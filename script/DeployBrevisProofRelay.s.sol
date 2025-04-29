@@ -5,7 +5,6 @@ import "forge-std/Script.sol";
 import {BrevisProofRelay} from "../src/brevis/BrevisProofRelay.sol";
 import {IBrevisProof} from "../src/brevis/IBrevisProof.sol";
 
-
 contract DeployBrevisProofRelay is Script {
     function run() public {
         vm.startBroadcast();
