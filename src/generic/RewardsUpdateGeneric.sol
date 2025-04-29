@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "../lib/EnumerableMap.sol";
 import "../rewards/RewardsStorage.sol";
 
@@ -9,7 +10,7 @@ struct ConfigGeneric {
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
     AddrAmt[] rewards; // list of [reward token and total amount]
-    address erc20; // which erc20 is used for token holding
+    bytes32[] extraData; // list of extra circuit output data to check in the contract
 }
 
 abstract contract RewardsUpdateGeneric is RewardsStorage {
@@ -23,9 +24,12 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
 
     // ----- internal functions -----
 
-    function _initConfig(ConfigGeneric calldata cfg, IBrevisProof _brevisProof, bytes32[] calldata vks, uint64 _dataChainId)
-        internal
-    {
+    function _initConfig(
+        ConfigGeneric calldata cfg,
+        IBrevisProof _brevisProof,
+        bytes32[] calldata vks,
+        uint64 _dataChainId
+    ) internal {
         brevisProof = _brevisProof;
         config = cfg;
         address[] memory _tokens = new address[](cfg.rewards.length);
@@ -43,8 +47,8 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
         return dataChainId;
     }
 
-    function _getHeaderSize(uint8) internal pure override returns (uint256) {
-        return 0;
+    function _getHeaderSize(uint8) internal view override returns (uint256) {
+        return 8 * config.extraData.length;
     }
 
     function _getSizePerEarner() internal view override returns (uint256) {
@@ -73,6 +77,18 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal returns (bool allEarnersProcessed) {
+        bytes32[] memory extraData = config.extraData;
+        for (uint256 i = 0; i < extraData.length; i++) {
+            require(
+                extraData[i] == bytes32(appOutputWithoutAppIdEpoch[(0 + i * 32):(0 + i * 32 + 32)]),
+                string.concat(
+                    string.concat(
+                        string.concat("invalid extra data, want ", Strings.toHexString(uint256(extraData[i]))), ", got "
+                    ),
+                    Strings.toHexString(uint256(bytes32(appOutputWithoutAppIdEpoch[(0 + i * 32):(0 + i * 32 + 32)])))
+                )
+            );
+        }
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
         address lastEarner = _lastEarnerOfLastSegment[appId][epoch];
