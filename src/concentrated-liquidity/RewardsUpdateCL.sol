@@ -58,9 +58,9 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
     }
 
     function _getHeaderSize(uint8 appId) internal pure override returns (uint256) {
-        if (appId == 1) {
+        if (appId == 2) { // direct
             return 32; // uint128 t0fee + uint128 t1fee
-        } else if (appId >= 2) {
+        } else if (appId == 3) { // indirect
             return 20; // address indirect
         } else {
             revert("invalid app id");
