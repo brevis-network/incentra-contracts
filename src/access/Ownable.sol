@@ -42,6 +42,7 @@ abstract contract Ownable {
     // allow setting owner different from deployer
     function initOwner(address newowner) internal {
         require(_owner == address(0), "owner already set");
+        require(newowner != address(0), "new owner is the zero address");
         _setOwner(newowner);
     }
 

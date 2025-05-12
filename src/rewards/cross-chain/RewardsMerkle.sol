@@ -28,6 +28,8 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     uint256[] subRootUserIndexStart;
     bytes32 public topRoot;
 
+    event EpochStarted(uint64 indexed epoch);
+    event SubRootGenStarted(uint64 indexed epoch);
     event SubRootLeafProcessed(
         uint64 indexed epoch,
         uint256 indexed subRootIndex,
@@ -49,12 +51,14 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         currEpoch = epoch;
         state = State.RewardsSubmission;
         subRoots.clear();
+        emit EpochStarted(epoch);
     }
 
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
         require(currEpoch == epoch, "invalid epoch");
         state = State.SubRootsGeneration;
+        emit SubRootGenStarted(epoch);
     }
 
     // ----------- Merkle Roots Generation -----------
