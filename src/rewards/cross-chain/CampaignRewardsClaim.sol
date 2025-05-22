@@ -18,6 +18,7 @@ struct Config {
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
     AddrAmt[] rewards; // list of [reward token and total amount]
+    address externalPayoutAddress; // If nonzero, only this address can call claim and no transfer will be made
 }
 
 // claim campaign rewards on chain one chain, which was submitted on another chain
@@ -74,11 +75,16 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         }
     }
 
+    function canRefund() external view returns (bool) {
+        return block.timestamp > config.startTime + config.duration + gracePeriod;
+    }
+
     // claim reward, send erc20 to earner
     function claim(address earner, uint256[] calldata cumulativeAmounts, uint64 _epoch, bytes32[] calldata proof)
         external
+        returns (address[] memory, uint256[] memory)
     {
-        _claim(earner, earner, cumulativeAmounts, _epoch, proof);
+        return _claim(earner, earner, cumulativeAmounts, _epoch, proof);
     }
 
     // msg.sender is the earner
@@ -87,8 +93,8 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         uint256[] calldata cumulativeAmounts,
         uint64 _epoch,
         bytes32[] calldata proof
-    ) external {
-        _claim(msg.sender, to, cumulativeAmounts, _epoch, proof);
+    ) external returns (address[] memory, uint256[] memory) {
+        return _claim(msg.sender, to, cumulativeAmounts, _epoch, proof);
     }
 
     /**
@@ -159,7 +165,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         uint256[] memory cumulativeAmounts,
         uint64 _epoch,
         bytes32[] memory proof
-    ) private {
+    ) private returns (address[] memory, uint256[] memory) {
         require(_epoch == epoch, "invalid epoch");
         address[] memory tokens = getTokens();
         bytes32 leafHash = keccak256(abi.encodePacked(earner, tokens, cumulativeAmounts));
@@ -173,7 +179,11 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
             claimed[earner][erc20] = cumulativeAmounts[i];
             // send token
             if (tosend > 0) {
-                IERC20(erc20).safeTransfer(to, tosend);
+                if (config.externalPayoutAddress == address(0)) {
+                    IERC20(erc20).safeTransfer(to, tosend);
+                } else {
+                    require(msg.sender == config.externalPayoutAddress, "unauthorized caller");
+                }
                 tokenClaimedRewards[erc20] += tosend;
                 hasUnclaimed = true;
             }
@@ -181,6 +191,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         }
         require(hasUnclaimed, "no unclaimed rewards");
         emit RewardsClaimed(earner, newAmount, cumulativeAmounts);
+        return (tokens, newAmount);
     }
 
     function _updateRoot(uint64 _epoch, bytes32 _topRoot) private {
