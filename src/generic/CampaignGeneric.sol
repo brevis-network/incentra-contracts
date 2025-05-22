@@ -17,11 +17,13 @@ contract CampaignGeneric is RewardsUpdateGeneric, RewardsClaim {
         address owner,
         bytes32[] calldata vks,
         uint64 dataChainId,
-        address rewardUpdater
+        address rewardUpdater,
+        address externalPayoutAddress
     ) external {
         initOwner(owner);
         _initConfig(cfg, brv, vks, dataChainId);
         grantRole(REWARD_UPDATER_ROLE, rewardUpdater);
+        _setExternalPayoutAddress(externalPayoutAddress);
     }
 
     // ----- external functions -----
@@ -34,6 +36,10 @@ contract CampaignGeneric is RewardsUpdateGeneric, RewardsClaim {
             address erc20 = cfg.rewards[i].token;
             IERC20(erc20).safeTransfer(cfg.creator, IERC20(erc20).balanceOf(address(this)));
         }
+    }
+
+    function canRefund() external view returns (bool) {
+        return block.timestamp > config.startTime + config.duration + gracePeriod;
     }
 
     // ----- internal functions -----
