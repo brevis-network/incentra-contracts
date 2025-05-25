@@ -18,7 +18,8 @@ struct Config {
     uint64 startTime;
     uint32 duration; // how many seconds this campaign is active, end after startTime+duration
     AddrAmt[] rewards; // list of [reward token and total amount]
-    address externalPayoutAddress; // If nonzero, only this address can call claim and no transfer will be made
+    // If set, only this address can call claim; rewards are not transferred directly, external address handles payout.
+    address externalPayoutAddress;
 }
 
 // claim campaign rewards on chain one chain, which was submitted on another chain

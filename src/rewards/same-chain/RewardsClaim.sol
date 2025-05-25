@@ -20,7 +20,7 @@ abstract contract RewardsClaim is RewardsStorage {
     // seconds after campaign end, after which all remaining balance can be refunded to creator
     uint64 public gracePeriod = 3600 * 24 * 180; // default 180 days
 
-    // If nonzero, only this address can call claim and no transfer will be made
+    // If set, only this address can call claim; rewards are not transferred directly, external address handles payout.
     address public externalPayoutAddress;
 
     event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
