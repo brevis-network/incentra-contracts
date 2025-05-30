@@ -7,6 +7,7 @@ solc_version = '0.8.29'
 via_ir = true
 optimizer = true
 optimizer_runs = 20_000
+evm_version = "london"
 
 [profile.ci]
 verbosity = 4
