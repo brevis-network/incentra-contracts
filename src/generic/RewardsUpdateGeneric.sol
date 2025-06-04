@@ -22,6 +22,10 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
     // For each app ID and each epoch, tracks the last earner from the last proof segment.
     mapping(uint8 => mapping(uint32 => address)) internal _lastEarnerOfLastSegment;
 
+    function getCampaignRewardConfig() public view returns (AddrAmt[] memory) {
+        return config.rewards;
+    }
+
     // ----- internal functions -----
 
     function _initConfig(
