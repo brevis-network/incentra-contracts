@@ -124,6 +124,10 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         return tokens;
     }
 
+    function getCampaignRewardConfig() public view returns (AddrAmt[] memory) {
+        return config.rewards;
+    }
+
     function viewClaimedRewards(address earner) external view returns (AddrAmt[] memory) {
         address[] memory tokens = getTokens();
         AddrAmt[] memory ret = new AddrAmt[](tokens.length);

@@ -22,6 +22,10 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
     // For each app ID and each epoch, tracks the last earner from the last proof segment.
     mapping(uint8 => mapping(uint32 => address)) internal _lastEarnerOfLastSegment;
 
+    function getCampaignRewardConfig() public view returns (AddrAmt[] memory) {
+        return config.rewards;
+    }
+
     // ----- internal functions -----
 
     function _initConfig(
@@ -80,10 +84,11 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
         checkExtraData(appOutputWithoutAppIdEpoch);
         uint256 numTokens = tokens.length;
         uint256[] memory newTokenRewards = new uint256[](numTokens);
+        uint256 headerSize = _getHeaderSize(appId);
         address lastEarner = _lastEarnerOfLastSegment[appId][epoch];
 
         for (uint256 earnerIndex = startEarnerIndex; earnerIndex <= endEarnerIndex; earnerIndex++) {
-            uint256 offset = _getSizePerEarner() * earnerIndex;
+            uint256 offset = headerSize + _getSizePerEarner() * earnerIndex;
             address earner = address(bytes20(appOutputWithoutAppIdEpoch[offset:(offset + 20)]));
             // skip empty address placeholders for the rest of array
             if (earner == address(0)) {

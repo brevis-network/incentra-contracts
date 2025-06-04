@@ -51,6 +51,10 @@ abstract contract RewardsUpdateCL is TotalFee, RewardsStorage {
         _updateFee(appOutput[21:]);
     }
 
+    function getCampaignRewardConfig() public view returns (AddrAmt[] memory) {
+        return config.rewards;
+    }
+
     // ----- internal functions -----
 
     function _getDataChainId() internal view override returns (uint64) {
