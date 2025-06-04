@@ -52,7 +52,7 @@ abstract contract RewardsUpdateGeneric is RewardsStorage {
     }
 
     function _getHeaderSize(uint8) internal view override returns (uint256) {
-        return 8 * config.extraData.length;
+        return 32 * config.extraData.length;
     }
 
     function _getSizePerEarner() internal view override returns (uint256) {
