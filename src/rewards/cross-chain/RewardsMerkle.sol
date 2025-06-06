@@ -4,17 +4,17 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
-import "../../access/AccessControl.sol";
 import "../../lib/EnumerableMap.sol";
 import "../RewardsStorage.sol";
+import "./message/MessageSenderApp.sol";
 
 // generate campaign rewards merkle root and proof on one chain, which will be claimed on another chain
-abstract contract RewardsMerkle is RewardsStorage, AccessControl {
+abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableMap for EnumerableMap.UserTokenAmountMap;
 
     enum State {
-        EpochInit,
+        Idle,
         RewardsSubmission,
         SubRootsGeneration,
         TopRootGeneration
@@ -39,19 +39,21 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     event SubRootGenerated(uint64 indexed epoch, uint256 indexed subRootIndex, bytes32 subRoot);
     event AllSubRootsGenerated(uint64 indexed epoch);
     event TopRootGenerated(uint64 indexed epoch, bytes32 topRoot);
+    event TopRootSent(uint64 indexed epoch, bytes32 topRoot, address receiver, uint64 dstChainId);
+    event MessageBusUpdated(address messageBus);
 
     // ----------- state transition -----------
     function startEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
-        require(state == State.EpochInit, "invalid state");
+        require(state == State.Idle, "invalid state");
+        require(epoch > currEpoch, "invalid epoch");
         currEpoch = epoch;
         state = State.RewardsSubmission;
-
         subRoots.clear();
     }
 
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
-        currEpoch = epoch;
+        require(currEpoch == epoch, "invalid epoch");
         state = State.SubRootsGeneration;
     }
 
@@ -68,7 +70,6 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     function genSubRoot(uint64 epoch, uint256 nLeaves) external {
         require(state == State.SubRootsGeneration, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
-
         require(nLeaves <= 2 ** 32, "too many leaves");
 
         uint256 subRootIndex = subRoots.length();
@@ -79,14 +80,14 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
             indexStart = subRootUserIndexStart[subRootIndex - 1];
         }
 
-        uint256 maxNLeaves = rewards.length() - indexStart;
+        uint256 maxNLeaves = _rewards.length() - indexStart;
         if (nLeaves > maxNLeaves) {
             nLeaves = maxNLeaves;
         }
         bytes32[] memory hashes = new bytes32[](nLeaves);
         address[] memory rewardTokens = getTokens();
         for (uint256 i = 0; i < nLeaves; i++) {
-            (address user, uint256[] memory rewardAmounts) = rewards.getUserAmountsAt(indexStart + i, rewardTokens);
+            (address user, uint256[] memory rewardAmounts) = _rewards.getUserAmountsAt(indexStart + i, rewardTokens);
             bytes32 leafHash = keccak256(abi.encodePacked(user, rewardTokens, rewardAmounts));
             hashes[i] = leafHash;
             emit SubRootLeafProcessed(epoch, subRootIndex, i, user, rewardAmounts, leafHash);
@@ -104,30 +105,34 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
     }
 
     /**
-     * @notice Returns the number of leaves left to be processed.
-     * @return nLeavesLeft The number of leaves left.
-     */
-    function getNumLeavesLeft() external view returns (uint64 nLeavesLeft) {
-        uint256 subRootIndex = subRoots.length();
-        uint256 indexStart = 0;
-        if (subRootIndex > 0) {
-            indexStart = subRootUserIndexStart[subRootIndex - 1];
-        }
-        nLeavesLeft = uint64(rewards.length() - indexStart);
-    }
-
-    /**
      * @notice Generates and records the top Merkle tree root, using the subtree roots as leaves.
      * @param epoch The epoch.
      */
-    function genTopRoot(uint64 epoch) external {
+    function genTopRoot(uint64 epoch) public {
         require(state == State.TopRootGeneration, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
-
         topRoot = genMerkleRoot(subRoots.values());
+        state = State.Idle;
+        emit TopRootGenerated(currEpoch, topRoot);
+    }
 
-        currEpoch++;
-        state = State.EpochInit;
+    /**
+     * @notice Send the top Merkle root to the destination chain.
+     * @param _receiver The CampaignRewardsClaim contract in the destination chain.
+     * @param _dstChainId The destination chain ID.
+     */
+    function sendTopRoot(address _receiver, uint64 _dstChainId) public payable {
+        require(messageBus != address(0), "message bus not set");
+        require(state == State.Idle, "invalid state");
+        require(topRoot != bytes32(0), "top root not generated");
+        bytes memory message = abi.encode(currEpoch, topRoot);
+        sendMessage(_receiver, _dstChainId, message, msg.value);
+        emit TopRootSent(currEpoch, topRoot, _receiver, _dstChainId);
+    }
+
+    function genAndSendTopRoot(address _receiver, uint64 _dstChainId) external payable {
+        genTopRoot(currEpoch);
+        sendTopRoot(_receiver, _dstChainId);
     }
 
     function getMerkleProof(uint64 epoch, address user)
@@ -135,32 +140,30 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
         view
         returns (uint256[] memory rewardAmounts, bytes32[] memory proof)
     {
-        require(state == State.EpochInit, "invalid state");
-        require(epoch == currEpoch - 1, "invalid epoch");
+        require(state == State.Idle, "invalid state");
+        require(epoch == currEpoch, "invalid epoch");
 
         address[] memory rewardTokens = getTokens();
-        rewardAmounts = rewards.getAmounts(user, rewardTokens);
+        rewardAmounts = _rewards.getAmounts(user, rewardTokens);
 
-        uint256 userIndex = rewards._keys._inner._positions[bytes32(uint256(uint160(user)))] - 1;
-
+        uint256 userIndex = _rewards._keys._inner._positions[bytes32(uint256(uint160(user)))] - 1;
         uint256 subRootIndex;
         while (subRootIndex < subRoots.length() - 1 && userIndex >= subRootUserIndexStart[subRootIndex]) {
             ++subRootIndex;
         }
 
         uint256 indexStart = subRootIndex == 0 ? 0 : subRootUserIndexStart[subRootIndex - 1];
-        uint256 nLeaves = rewards.length() - indexStart;
+        uint256 nLeaves = _rewards.length() - indexStart;
         if (subRootIndex < subRoots.length() - 1) {
-            nLeaves -= rewards.length() - subRootUserIndexStart[subRootIndex];
+            nLeaves -= _rewards.length() - subRootUserIndexStart[subRootIndex];
         }
 
         bytes32[] memory hashes = new bytes32[](nLeaves);
         for (uint256 i = 0; i < hashes.length; i++) {
-            (address _user, uint256[] memory _rewardAmounts) = rewards.getUserAmountsAt(indexStart + i, rewardTokens);
+            (address _user, uint256[] memory _rewardAmounts) = _rewards.getUserAmountsAt(indexStart + i, rewardTokens);
             hashes[i] = keccak256(abi.encodePacked(_user, rewardTokens, _rewardAmounts));
         }
         bytes32[] memory subProof = genMerkleProof(hashes, userIndex - indexStart);
-
         bytes32[] memory topProof = genMerkleProof(subRoots.values(), subRootIndex);
 
         proof = new bytes32[](subProof.length + topProof.length);
@@ -170,6 +173,14 @@ abstract contract RewardsMerkle is RewardsStorage, AccessControl {
         for (uint256 i = 0; i < topProof.length; i++) {
             proof[subProof.length + i] = topProof[i];
         }
+    }
+
+    // ----- admin functions -----
+
+    function setMessageBus(address _messageBus) external onlyOwner {
+        require(_messageBus != address(0), "invalid message bus");
+        messageBus = _messageBus;
+        emit MessageBusUpdated(_messageBus);
     }
 
     // ----------- Private Functions -----------

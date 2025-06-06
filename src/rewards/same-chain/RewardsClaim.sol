@@ -17,14 +17,47 @@ abstract contract RewardsClaim is RewardsStorage {
     // token -> total claimed amount
     mapping(address => uint256) public tokenClaimedRewards;
 
+    // seconds after campaign end, after which all remaining balance can be refunded to creator
+    uint64 public gracePeriod = 3600 * 24 * 180; // default 180 days
+
     event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
+    event GracePeriodUpdated(uint64 gracePeriod);
+
+    // ----- external functions -----
+
+    // claim reward, send erc20 to earner
+    function claim(address earner) external {
+        _claim(earner, earner);
+    }
+
+    // msg.sender is the earner
+    function claimWithRecipient(address to) external {
+        _claim(msg.sender, to);
+    }
+
+    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
+        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            uint256 tosend = _rewards.get(earner, token) - claimed[earner][token];
+            ret[i] = AddrAmt({token: token, amount: tosend});
+        }
+        return ret;
+    }
+
+    function setGracePeriod(uint64 _gracePeriod) external onlyOwner {
+        gracePeriod = _gracePeriod;
+        emit GracePeriodUpdated(_gracePeriod);
+    }
+
+    // ----- internal functions -----
 
     function _claim(address earner, address to) internal {
         uint256[] memory claimedRewards = new uint256[](tokens.length);
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            uint256 cumulativeAmount = rewards.get(earner, token);
+            uint256 cumulativeAmount = _rewards.get(earner, token);
             uint256 tosend = cumulativeAmount - claimed[earner][token];
             claimed[earner][token] = cumulativeAmount;
             // send token
@@ -37,15 +70,5 @@ abstract contract RewardsClaim is RewardsStorage {
         }
         require(hasUnclaimed, "no unclaimed rewards");
         emit RewardsClaimed(earner, claimedRewards);
-    }
-
-    function viewUnclaimedRewards(address earner) external view returns (AddrAmt[] memory) {
-        AddrAmt[] memory ret = new AddrAmt[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            uint256 tosend = rewards.get(earner, token) - claimed[earner][token];
-            ret[i] = AddrAmt({token: token, amount: tosend});
-        }
-        return ret;
     }
 }

@@ -2,13 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "../rewards/cross-chain/RewardsMerkle.sol";
-import "./RewardsUpdateCL.sol";
+import "./RewardsUpdateGeneric.sol";
 
 // submit campaign rewards on one chain, which will be claimed on another chain
-contract RewardsSubmissionCL is RewardsUpdateCL, RewardsMerkle {
+contract RewardsSubmissionGeneric is RewardsUpdateGeneric, RewardsMerkle {
     // called by proxy to properly set storage of proxy contract, owner is contract owner (hw or multisig)
     function init(
-        ConfigCL calldata cfg,
+        ConfigGeneric calldata cfg,
         IBrevisProof brv,
         address owner,
         bytes32[] calldata vks,

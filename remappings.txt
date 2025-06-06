@@ -1,2 +1,6 @@
+@openzeppelin/contracts/=lib/openzeppelin/contracts/
+erc4626-tests/=lib/openzeppelin/lib/erc4626-tests/
 forge-std/=lib/forge-std/src/
-@openzeppelin/=lib/openzeppelin/
+halmos-cheatcodes/=lib/openzeppelin/lib/halmos-cheatcodes/src/
+openzeppelin/=lib/openzeppelin/
+openzeppelin-v4/=lib/openzeppelin-v4/
