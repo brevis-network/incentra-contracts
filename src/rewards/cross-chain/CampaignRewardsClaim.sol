@@ -137,6 +137,10 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         return ret;
     }
 
+    function externalPayoutAddress() external view returns (address) {
+        return config.externalPayoutAddress;
+    }
+
     // ----- admin functions -----
     function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
         submissionChainId = _submissionChainId;
