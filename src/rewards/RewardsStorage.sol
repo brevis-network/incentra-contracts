@@ -23,6 +23,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 endEarnerIndex
     );
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
+    event RewardAdjusted(address indexed user, int256[] adjustment, uint256[] cumulativeRewards);
     event VkUpdated(uint8 appId, bytes32 vk);
 
     // ----- external fields -----
@@ -100,6 +101,23 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         }
     }
 
+    function adjustRewards(
+        address[] calldata users,
+        int256[][] calldata adjustments,
+        uint256[][] calldata newCumulativeRewards
+    ) external onlyRole(REWARD_UPDATER_ROLE) {
+        for (uint256 i = 0; i < users.length; i++) {
+            _adjustRewards(users[i], adjustments[i], newCumulativeRewards[i]);
+        }
+    }
+
+    function adjustRewards(address user, int256[] calldata adjustments, uint256[] calldata newCumulativeRewards)
+        external
+        onlyRole(REWARD_UPDATER_ROLE)
+    {
+        _adjustRewards(user, adjustments, newCumulativeRewards);
+    }
+
     // ----- internal functions -----
 
     function _initTokens(address[] memory _tokens) internal {
@@ -133,4 +151,24 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal virtual returns (bool allEarnersProcessed);
+
+    // Adjust rewards for a user by providing an adjustment array and new cumulative rewards.
+    // To preventing errors from concurrent updates, both `adjustments` and `newCumulativeRewards` are required
+    function _adjustRewards(address user, int256[] calldata adjustments, uint256[] calldata newCumulativeRewards)
+        internal
+    {
+        require(adjustments.length == tokens.length, "adjustments length mismatch");
+        require(newCumulativeRewards.length == tokens.length, "new cumulative rewards length mismatch");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 cumulativeRewards = _rewards.get(user, tokens[i]);
+            if (adjustments[i] > 0) {
+                cumulativeRewards += uint256(adjustments[i]);
+            } else {
+                cumulativeRewards -= uint256(-adjustments[i]);
+            }
+            require(cumulativeRewards == newCumulativeRewards[i], "cumulative rewards mismatch");
+            _rewards.set(user, tokens[i], cumulativeRewards, _useEnumerableMap());
+        }
+        emit RewardAdjusted(user, adjustments, newCumulativeRewards);
+    }
 }
