@@ -23,7 +23,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 endEarnerIndex
     );
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
-    event RewardAdjusted(uint64 indexed adjustmentId, address indexed user, int256[] adjustment);
+    event RewardsAdjusted(uint64 indexed adjustmentId, address indexed user, int256[] adjustment);
     event RewardsCleared(uint64 indexed adjustmentId, address indexed user);
     event VkUpdated(uint8 appId, bytes32 vk);
 
@@ -170,7 +170,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
             }
             _rewards.set(user, tokens[i], cumulativeRewards, _useEnumerableMap());
         }
-        emit RewardAdjusted(adjustmentId, user, adjustments);
+        emit RewardsAdjusted(adjustmentId, user, adjustments);
     }
 
     function _adjustable() internal view virtual returns (bool);
