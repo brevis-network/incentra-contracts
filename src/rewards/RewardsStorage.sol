@@ -157,6 +157,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     function _adjustRewards(address user, int256[] calldata adjustments, uint256[] calldata newCumulativeRewards)
         internal
     {
+        require(_adjustable(), "rewards not adjustable");
         require(adjustments.length == tokens.length, "adjustments length mismatch");
         require(newCumulativeRewards.length == tokens.length, "new cumulative rewards length mismatch");
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -171,4 +172,6 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         }
         emit RewardAdjusted(user, adjustments, newCumulativeRewards);
     }
+
+    function _adjustable() internal view virtual returns (bool);
 }
