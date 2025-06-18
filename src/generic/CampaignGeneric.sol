@@ -47,4 +47,8 @@ contract CampaignGeneric is RewardsUpdateGeneric, RewardsClaim {
     function _useEnumerableMap() internal pure override returns (bool) {
         return false;
     }
+
+    function _adjustable() internal pure override returns (bool) {
+        return true;
+    }
 }

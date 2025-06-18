@@ -233,4 +233,8 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
             mstore(proof, length)
         }
     }
+
+    function _adjustable() internal view override returns (bool) {
+        return state == State.RewardsSubmission;
+    }
 }

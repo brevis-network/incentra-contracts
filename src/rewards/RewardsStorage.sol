@@ -23,7 +23,8 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 endEarnerIndex
     );
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
-    event RewardAdjusted(address indexed user, int256[] adjustment, uint256[] cumulativeRewards);
+    event RewardsAdjusted(uint64 indexed adjustmentId, address indexed user, int256[] adjustment);
+    event RewardsCleared(uint64 indexed adjustmentId, address indexed user);
     event VkUpdated(uint8 appId, bytes32 vk);
 
     // ----- external fields -----
@@ -37,6 +38,8 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     mapping(address => uint256) public tokenCumulativeRewards;
 
     mapping(uint8 => bytes32) public vkMap; // from app ID to vkHash
+
+    mapping(uint64 => address) public lastAdjustedUser; // last user adjusted for an adjustment ID
 
     // ----- internal fields -----
 
@@ -101,21 +104,24 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         }
     }
 
-    function adjustRewards(
-        address[] calldata users,
-        int256[][] calldata adjustments,
-        uint256[][] calldata newCumulativeRewards
-    ) external onlyRole(REWARD_UPDATER_ROLE) {
-        for (uint256 i = 0; i < users.length; i++) {
-            _adjustRewards(users[i], adjustments[i], newCumulativeRewards[i]);
-        }
-    }
-
-    function adjustRewards(address user, int256[] calldata adjustments, uint256[] calldata newCumulativeRewards)
+    function adjustRewards(uint64 adjustmentId, address[] calldata users, int256[][] calldata adjustments)
         external
         onlyRole(REWARD_UPDATER_ROLE)
     {
-        _adjustRewards(user, adjustments, newCumulativeRewards);
+        address lastUser = lastAdjustedUser[adjustmentId];
+        for (uint256 i = 0; i < users.length; i++) {
+            require(lastUser < users[i], "users must be in ascending order");
+            lastUser = users[i];
+            _adjustRewards(adjustmentId, users[i], adjustments[i]);
+        }
+        lastAdjustedUser[adjustmentId] = lastUser;
+    }
+
+    function clearRewards(uint64 adjustmentId, address user) external onlyRole(REWARD_UPDATER_ROLE) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            _rewards.set(user, tokens[i], 0, _useEnumerableMap());
+        }
+        emit RewardsCleared(adjustmentId, user);
     }
 
     // ----- internal functions -----
@@ -152,13 +158,9 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 endEarnerIndex
     ) internal virtual returns (bool allEarnersProcessed);
 
-    // Adjust rewards for a user by providing an adjustment array and new cumulative rewards.
-    // To preventing errors from concurrent updates, both `adjustments` and `newCumulativeRewards` are required
-    function _adjustRewards(address user, int256[] calldata adjustments, uint256[] calldata newCumulativeRewards)
-        internal
-    {
+    function _adjustRewards(uint64 adjustmentId, address user, int256[] calldata adjustments) internal {
+        require(_adjustable(), "rewards not adjustable");
         require(adjustments.length == tokens.length, "adjustments length mismatch");
-        require(newCumulativeRewards.length == tokens.length, "new cumulative rewards length mismatch");
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 cumulativeRewards = _rewards.get(user, tokens[i]);
             if (adjustments[i] > 0) {
@@ -166,9 +168,10 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
             } else {
                 cumulativeRewards -= uint256(-adjustments[i]);
             }
-            require(cumulativeRewards == newCumulativeRewards[i], "cumulative rewards mismatch");
             _rewards.set(user, tokens[i], cumulativeRewards, _useEnumerableMap());
         }
-        emit RewardAdjusted(user, adjustments, newCumulativeRewards);
+        emit RewardsAdjusted(adjustmentId, user, adjustments);
     }
+
+    function _adjustable() internal view virtual returns (bool);
 }
