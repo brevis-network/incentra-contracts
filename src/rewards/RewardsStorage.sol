@@ -80,6 +80,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         external
         onlyRole(REWARD_UPDATER_ROLE)
     {
+        require(_updatable(), "rewards not updatable");
         (bytes32 proofId, uint8 appId) = _checkProofAndGetAppId(proof, appOutput);
         uint256 lastProcessedEarnerCount = _proofLastProcessedEarnerCount[proofId];
         uint32 epoch = uint32(bytes4(appOutput[1:5]));
@@ -159,7 +160,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     ) internal virtual returns (bool allEarnersProcessed);
 
     function _adjustRewards(uint64 adjustmentId, address user, int256[] calldata adjustments) internal {
-        require(_adjustable(), "rewards not adjustable");
+        require(_updatable(), "rewards not updatable");
         require(adjustments.length == tokens.length, "adjustments length mismatch");
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 cumulativeRewards = _rewards.get(user, tokens[i]);
@@ -173,5 +174,5 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         emit RewardsAdjusted(adjustmentId, user, adjustments);
     }
 
-    function _adjustable() internal view virtual returns (bool);
+    function _updatable() internal view virtual returns (bool);
 }
