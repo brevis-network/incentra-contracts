@@ -27,6 +27,7 @@ abstract contract RewardsClaim is RewardsStorage {
 
     event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
     event GracePeriodUpdated(uint64 gracePeriod);
+    event BlacklistUpdated(address indexed earner, bool isBlacklisted);
 
     // ----- external functions -----
 
@@ -52,6 +53,7 @@ abstract contract RewardsClaim is RewardsStorage {
 
     function setBlacklisted(address earner, bool isBlacklisted) external onlyRole(REWARD_UPDATER_ROLE) {
         blacklisted[earner] = isBlacklisted;
+        emit BlacklistUpdated(earner, isBlacklisted);
     }
 
     function setGracePeriod(uint64 _gracePeriod) external onlyOwner {

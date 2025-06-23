@@ -51,6 +51,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     event GracePeriodUpdated(uint64 gracePeriod);
     event MessageBusUpdated(address messageBus);
     event SubmissionContractUpdated(uint64 submissionChainId, address submissionAddress);
+    event BlacklistUpdated(address indexed earner, bool isBlacklisted);
 
     function init(
         Config calldata cfg,
@@ -145,6 +146,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
 
     function setBlacklisted(address earner, bool isBlacklisted) external onlyRole(ROOT_UPDATER_ROLE) {
         blacklisted[earner] = isBlacklisted;
+        emit BlacklistUpdated(earner, isBlacklisted);
     }
 
     // ----- admin functions -----
