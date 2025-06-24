@@ -41,6 +41,8 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     uint64 public epoch;
     bytes32 public topRoot;
 
+    mapping(address => bool) public blacklisted; // blacklisted addresses cannot claim rewards
+
     uint64 public submissionChainId;
     address public submissionAddress;
 
@@ -49,6 +51,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     event GracePeriodUpdated(uint64 gracePeriod);
     event MessageBusUpdated(address messageBus);
     event SubmissionContractUpdated(uint64 submissionChainId, address submissionAddress);
+    event BlacklistUpdated(address indexed earner, bool isBlacklisted);
 
     function init(
         Config calldata cfg,
@@ -141,6 +144,11 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         return config.externalPayoutAddress;
     }
 
+    function setBlacklisted(address earner, bool isBlacklisted) external onlyRole(ROOT_UPDATER_ROLE) {
+        blacklisted[earner] = isBlacklisted;
+        emit BlacklistUpdated(earner, isBlacklisted);
+    }
+
     // ----- admin functions -----
     function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
         submissionChainId = _submissionChainId;
@@ -175,6 +183,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         uint64 _epoch,
         bytes32[] memory proof
     ) private returns (address[] memory, uint256[] memory) {
+        require(!blacklisted[earner], "blacklisted earner");
         require(_epoch == epoch, "invalid epoch");
         address[] memory tokens = getTokens();
         bytes32 leafHash = keccak256(abi.encodePacked(earner, tokens, cumulativeAmounts));
