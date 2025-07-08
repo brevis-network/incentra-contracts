@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "./IBrevisProof.sol";
 
-contract MockBrevisProof is IBrevisProof {
+contract SimpleBrevisProof is IBrevisProof {
     mapping(bytes32 => bytes32) public proofs; // proofId => keccak256(abi.encodePacked(appCommitHash, appVkHash));
 
     function submitProof(uint64, bytes calldata _proof)
@@ -28,11 +28,7 @@ contract MockBrevisProof is IBrevisProof {
     function submitAggProof(uint64 _chainId, bytes32[] calldata _proofIds, bytes calldata _proofWithPubInputs)
         external
         override
-    {
-        // Mock implementation
-    }
+    {}
 
-    function validateAggProofData(uint64 _chainId, ProofData[] calldata _proofDataArray) external view override {
-        // Mock implementation
-    }
+    function validateAggProofData(uint64 _chainId, ProofData[] calldata _proofDataArray) external view override {}
 }
