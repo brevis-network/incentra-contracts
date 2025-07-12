@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
 
 import "../../access/AccessControl.sol";
+import "../ClaimEventHub.sol";
 import "./message/MessageReceiverApp.sol";
 
 struct AddrAmt {
@@ -46,8 +47,9 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     uint64 public submissionChainId;
     address public submissionAddress;
 
+    address public claimEventHub;
+
     event TopRootUpdated(uint64 indexed epoch, bytes32 topRoot);
-    event RewardsClaimed(address indexed earner, uint256[] newAmount, uint256[] cumulativeAmounts);
     event GracePeriodUpdated(uint64 gracePeriod);
     event MessageBusUpdated(address messageBus);
     event SubmissionContractUpdated(uint64 submissionChainId, address submissionAddress);
@@ -149,6 +151,10 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         emit BlacklistUpdated(earner, isBlacklisted);
     }
 
+    function setClaimEventHub(address _claimEventHub) external onlyRole(ROOT_UPDATER_ROLE) {
+        claimEventHub = _claimEventHub;
+    }
+
     // ----- admin functions -----
     function setSubmissionContract(uint64 _submissionChainId, address _submissionAddress) external onlyOwner {
         submissionChainId = _submissionChainId;
@@ -189,7 +195,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         bytes32 leafHash = keccak256(abi.encodePacked(earner, tokens, cumulativeAmounts));
         require(verifyMerkleProof(proof, topRoot, leafHash), "verification failed");
 
-        uint256[] memory newAmount = new uint256[](tokens.length);
+        uint256[] memory newAmounts = new uint256[](tokens.length);
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             address erc20 = tokens[i];
@@ -205,11 +211,11 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
                 tokenClaimedRewards[erc20] += tosend;
                 hasUnclaimed = true;
             }
-            newAmount[i] = tosend;
+            newAmounts[i] = tosend;
         }
         require(hasUnclaimed, "no unclaimed rewards");
-        emit RewardsClaimed(earner, newAmount, cumulativeAmounts);
-        return (tokens, newAmount);
+        ClaimEventHub(claimEventHub).emitRewardsClaimed(earner, newAmounts, cumulativeAmounts);
+        return (tokens, newAmounts);
     }
 
     function _updateRoot(uint64 _epoch, bytes32 _topRoot) private {
