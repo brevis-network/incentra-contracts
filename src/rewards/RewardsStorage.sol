@@ -145,6 +145,10 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
 
     function clearRewards(uint64 adjustmentId, address user) external onlyRole(REWARD_UPDATER_ROLE) {
         for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 userRewards = _rewards.get(user, tokens[i]);
+            if (userRewards > 0) {
+                tokenCumulativeRewards[tokens[i]] -= userRewards;
+            }
             _rewards.set(user, tokens[i], 0, _useEnumerableMap());
         }
         emit RewardsCleared(adjustmentId, user);
