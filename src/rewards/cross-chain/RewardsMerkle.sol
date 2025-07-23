@@ -52,7 +52,6 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         require(epoch > currEpoch, "invalid epoch");
         currEpoch = epoch;
         state = State.RewardsSubmission;
-        subRoots.clear();
         emit EpochStarted(epoch);
     }
 
@@ -60,13 +59,13 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         require(state == State.Idle, "invalid state");
         require(epoch == currEpoch, "can only restart current epoch");
         state = State.RewardsSubmission;
-        subRoots.clear();
         emit EpochStarted(epoch);
     }
 
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
         require(currEpoch == epoch, "invalid epoch");
+        subRoots.clear();
         state = State.SubRootsGeneration;
         emit SubRootGenStarted(epoch);
     }
