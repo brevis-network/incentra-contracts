@@ -54,6 +54,14 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         emit EpochStarted(epoch);
     }
 
+    function adjustEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
+        require(state == State.Idle, "invalid state");
+        require(epoch == currEpoch, "can only adjust current epoch");
+        state = State.RewardsSubmission;
+        subRoots.clear();
+        emit EpochStarted(epoch);
+    }
+
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
         require(currEpoch == epoch, "invalid epoch");
