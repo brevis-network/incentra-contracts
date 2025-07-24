@@ -29,6 +29,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     bytes32 public topRoot;
 
     event EpochStarted(uint64 indexed epoch);
+    event EpochRestarted(uint64 indexed epoch);
     event SubRootGenStarted(uint64 indexed epoch);
     event SubRootLeafProcessed(
         uint64 indexed epoch,
@@ -42,28 +43,35 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     event AllSubRootsGenerated(uint64 indexed epoch);
     event TopRootGenerated(uint64 indexed epoch, bytes32 topRoot);
     event TopRootSent(uint64 indexed epoch, bytes32 topRoot, address receiver, uint64 dstChainId);
+    event GlobalStateUpdated(uint64 indexed currEpoch, State indexed state);
     event MessageBusUpdated(address messageBus);
 
     // ----------- state transition -----------
+
     function startEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.Idle, "invalid state");
         require(epoch > currEpoch, "invalid epoch");
         currEpoch = epoch;
         state = State.RewardsSubmission;
-        subRoots.clear();
         emit EpochStarted(epoch);
+    }
+
+    function restartEpoch(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
+        require(state == State.Idle, "invalid state");
+        require(epoch == currEpoch, "can only restart current epoch");
+        state = State.RewardsSubmission;
+        emit EpochRestarted(epoch);
     }
 
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
         require(state == State.RewardsSubmission, "invalid state");
         require(currEpoch == epoch, "invalid epoch");
+        subRoots.clear();
         state = State.SubRootsGeneration;
         emit SubRootGenStarted(epoch);
     }
 
     // ----------- Merkle Roots Generation -----------
-
-    // ----------- External Functions -----------
 
     /**
      * @notice Generates and records a Merkle root for a subset of users up to `nLeaves`.
@@ -179,16 +187,6 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         }
     }
 
-    // ----- admin functions -----
-
-    function setMessageBus(address _messageBus) external onlyOwner {
-        require(_messageBus != address(0), "invalid message bus");
-        messageBus = _messageBus;
-        emit MessageBusUpdated(_messageBus);
-    }
-
-    // ----------- Private Functions -----------
-
     function genMerkleRoot(bytes32[] memory hashes) private pure returns (bytes32) {
         if (hashes.length == 0) {
             return bytes32(0);
@@ -236,5 +234,19 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
 
     function _updatable() internal view override returns (bool) {
         return state == State.RewardsSubmission;
+    }
+
+    // ----- admin functions -----
+
+    function setGlobalState(uint64 _currEpoch, State _state) external onlyOwner {
+        currEpoch = _currEpoch;
+        state = _state;
+        emit GlobalStateUpdated(currEpoch, state);
+    }
+
+    function setMessageBus(address _messageBus) external onlyOwner {
+        require(_messageBus != address(0), "invalid message bus");
+        messageBus = _messageBus;
+        emit MessageBusUpdated(_messageBus);
     }
 }

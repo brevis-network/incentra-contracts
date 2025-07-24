@@ -24,6 +24,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     );
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
     event RewardsAdjusted(uint64 indexed adjustmentId, address indexed user, int256[] adjustment);
+    event RewardsSet(address indexed user, uint256[] cumulativeRewards);
     event RewardsCleared(uint64 indexed adjustmentId, address indexed user);
     event VkUpdated(uint8 appId, bytes32 vk);
 
@@ -138,6 +139,33 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
             if (totalAdjustments[j] > 0) {
                 tokenCumulativeRewards[tokens[j]] += uint256(totalAdjustments[j]);
             } else {
+                tokenCumulativeRewards[tokens[j]] -= uint256(-totalAdjustments[j]);
+            }
+        }
+    }
+
+    function setUserRewards(address[] calldata users, uint256[][] calldata cumulativeRewards)
+        external
+        onlyRole(REWARD_UPDATER_ROLE)
+    {
+        require(_updatable(), "rewards not updatable");
+        require(users.length == cumulativeRewards.length, "users and rewards length mismatch");
+        int256[] memory totalAdjustments = new int256[](tokens.length);
+        for (uint256 i = 0; i < users.length; i++) {
+            require(cumulativeRewards[i].length == tokens.length, "rewards length mismatch");
+            for (uint256 j = 0; j < tokens.length; j++) {
+                uint256 oldRewards = _rewards.get(users[i], tokens[j]);
+                uint256 newRewards = cumulativeRewards[i][j];
+                _rewards.set(users[i], tokens[j], newRewards, _useEnumerableMap());
+                totalAdjustments[j] += int256(newRewards) - int256(oldRewards);
+            }
+            emit RewardsSet(users[i], cumulativeRewards[i]);
+        }
+        // Update cumulative rewards for each token
+        for (uint256 j = 0; j < tokens.length; j++) {
+            if (totalAdjustments[j] > 0) {
+                tokenCumulativeRewards[tokens[j]] += uint256(totalAdjustments[j]);
+            } else if (totalAdjustments[j] < 0) {
                 tokenCumulativeRewards[tokens[j]] -= uint256(-totalAdjustments[j]);
             }
         }
