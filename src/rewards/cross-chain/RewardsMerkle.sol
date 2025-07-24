@@ -29,6 +29,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     bytes32 public topRoot;
 
     event EpochStarted(uint64 indexed epoch);
+    event EpochRestarted(uint64 indexed epoch);
     event SubRootGenStarted(uint64 indexed epoch);
     event SubRootLeafProcessed(
         uint64 indexed epoch,
@@ -59,7 +60,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         require(state == State.Idle, "invalid state");
         require(epoch == currEpoch, "can only restart current epoch");
         state = State.RewardsSubmission;
-        emit EpochStarted(epoch);
+        emit EpochRestarted(epoch);
     }
 
     function startSubRootGen(uint64 epoch) external onlyRole(REWARD_UPDATER_ROLE) {
