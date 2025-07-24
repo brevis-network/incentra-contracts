@@ -236,9 +236,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
         return state == State.RewardsSubmission;
     }
 
-    // ----- admin functions -----
-
-    function setGlobalState(uint64 _currEpoch, State _state) external onlyOwner {
+    function setGlobalState(uint64 _currEpoch, State _state) external onlyRole(REWARD_UPDATER_ROLE) {
         currEpoch = _currEpoch;
         state = _state;
         emit GlobalStateUpdated(currEpoch, state);
