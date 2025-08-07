@@ -16,7 +16,7 @@ interface IBrevisProof {
         external
         returns (bytes32 proofId, bytes32 appCommitHash, bytes32 appVkHash);
 
-    function validateProofAppData(bytes32 _requestId, bytes32 _appCommitHash, bytes32 _appVkHash)
+    function validateProofAppData(bytes32 _proofId, bytes32 _appCommitHash, bytes32 _appVkHash)
         external
         view
         returns (bool);

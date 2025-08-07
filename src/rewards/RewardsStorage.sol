@@ -23,6 +23,9 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 endEarnerIndex
     );
     event ProofProcessed(bytes32 indexed proofId, uint32 indexed epoch, uint32 indexed batchIndex);
+    event RewardsAdjusted(uint64 indexed adjustmentId, address indexed user, int256[] adjustment);
+    event RewardsSet(address indexed user, uint256[] cumulativeRewards);
+    event RewardsCleared(uint64 indexed adjustmentId, address indexed user);
     event VkUpdated(uint8 appId, bytes32 vk);
 
     // ----- external fields -----
@@ -36,6 +39,8 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
     mapping(address => uint256) public tokenCumulativeRewards;
 
     mapping(uint8 => bytes32) public vkMap; // from app ID to vkHash
+
+    mapping(uint64 => address) public lastAdjustedUser; // last user adjusted for an adjustment ID
 
     // ----- internal fields -----
 
@@ -76,6 +81,7 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         external
         onlyRole(REWARD_UPDATER_ROLE)
     {
+        require(_updatable(), "rewards not updatable");
         (bytes32 proofId, uint8 appId) = _checkProofAndGetAppId(proof, appOutput);
         uint256 lastProcessedEarnerCount = _proofLastProcessedEarnerCount[proofId];
         uint32 epoch = uint32(bytes4(appOutput[1:5]));
@@ -98,6 +104,82 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         if (endEarnerIndex == numEarnersInProof - 1) {
             emit ProofProcessed(proofId, epoch, batchIndex);
         }
+    }
+
+    function adjustRewards(uint64 adjustmentId, address[] calldata users, int256[][] calldata adjustments)
+        external
+        onlyRole(REWARD_UPDATER_ROLE)
+    {
+        require(_updatable(), "rewards not updatable");
+        int256[] memory totalAdjustments = new int256[](tokens.length);
+
+        address lastUser = lastAdjustedUser[adjustmentId];
+        for (uint256 i = 0; i < users.length; i++) {
+            require(lastUser < users[i], "users must be in ascending order");
+            lastUser = users[i];
+
+            // Adjust rewards for the current user
+            require(adjustments[i].length == tokens.length, "adjustments length mismatch");
+            for (uint256 j = 0; j < tokens.length; j++) {
+                uint256 cumulativeRewards = _rewards.get(users[i], tokens[j]);
+                if (adjustments[i][j] > 0) {
+                    cumulativeRewards += uint256(adjustments[i][j]);
+                } else {
+                    cumulativeRewards -= uint256(-adjustments[i][j]);
+                }
+                _rewards.set(users[i], tokens[j], cumulativeRewards, _useEnumerableMap());
+                totalAdjustments[j] += adjustments[i][j];
+            }
+            emit RewardsAdjusted(adjustmentId, users[i], adjustments[i]);
+        }
+        lastAdjustedUser[adjustmentId] = lastUser;
+
+        // Update cumulative rewards for each token
+        for (uint256 j = 0; j < tokens.length; j++) {
+            if (totalAdjustments[j] > 0) {
+                tokenCumulativeRewards[tokens[j]] += uint256(totalAdjustments[j]);
+            } else {
+                tokenCumulativeRewards[tokens[j]] -= uint256(-totalAdjustments[j]);
+            }
+        }
+    }
+
+    function setUserRewards(address[] calldata users, uint256[][] calldata cumulativeRewards)
+        external
+        onlyRole(REWARD_UPDATER_ROLE)
+    {
+        require(_updatable(), "rewards not updatable");
+        require(users.length == cumulativeRewards.length, "users and rewards length mismatch");
+        int256[] memory totalAdjustments = new int256[](tokens.length);
+        for (uint256 i = 0; i < users.length; i++) {
+            require(cumulativeRewards[i].length == tokens.length, "rewards length mismatch");
+            for (uint256 j = 0; j < tokens.length; j++) {
+                uint256 oldRewards = _rewards.get(users[i], tokens[j]);
+                uint256 newRewards = cumulativeRewards[i][j];
+                _rewards.set(users[i], tokens[j], newRewards, _useEnumerableMap());
+                totalAdjustments[j] += int256(newRewards) - int256(oldRewards);
+            }
+            emit RewardsSet(users[i], cumulativeRewards[i]);
+        }
+        // Update cumulative rewards for each token
+        for (uint256 j = 0; j < tokens.length; j++) {
+            if (totalAdjustments[j] > 0) {
+                tokenCumulativeRewards[tokens[j]] += uint256(totalAdjustments[j]);
+            } else if (totalAdjustments[j] < 0) {
+                tokenCumulativeRewards[tokens[j]] -= uint256(-totalAdjustments[j]);
+            }
+        }
+    }
+
+    function clearRewards(uint64 adjustmentId, address user) external onlyRole(REWARD_UPDATER_ROLE) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 userRewards = _rewards.get(user, tokens[i]);
+            if (userRewards > 0) {
+                tokenCumulativeRewards[tokens[i]] -= userRewards;
+            }
+            _rewards.set(user, tokens[i], 0, _useEnumerableMap());
+        }
+        emit RewardsCleared(adjustmentId, user);
     }
 
     // ----- internal functions -----
@@ -133,4 +215,6 @@ abstract contract RewardsStorage is BrevisProofApp, AccessControl {
         uint256 startEarnerIndex,
         uint256 endEarnerIndex
     ) internal virtual returns (bool allEarnersProcessed);
+
+    function _updatable() internal view virtual returns (bool);
 }

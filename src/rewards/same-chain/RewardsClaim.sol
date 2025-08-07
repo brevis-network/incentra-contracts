@@ -23,8 +23,11 @@ abstract contract RewardsClaim is RewardsStorage {
     // If set, only this address can call claim; rewards are not transferred directly, external address handles payout.
     address public externalPayoutAddress;
 
+    mapping(address => bool) public blacklisted; // blacklisted addresses cannot claim rewards
+
     event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
     event GracePeriodUpdated(uint64 gracePeriod);
+    event BlacklistUpdated(address indexed earner, bool isBlacklisted);
 
     // ----- external functions -----
 
@@ -48,6 +51,11 @@ abstract contract RewardsClaim is RewardsStorage {
         return ret;
     }
 
+    function setBlacklisted(address earner, bool isBlacklisted) external onlyRole(REWARD_UPDATER_ROLE) {
+        blacklisted[earner] = isBlacklisted;
+        emit BlacklistUpdated(earner, isBlacklisted);
+    }
+
     function setGracePeriod(uint64 _gracePeriod) external onlyOwner {
         gracePeriod = _gracePeriod;
         emit GracePeriodUpdated(_gracePeriod);
@@ -60,6 +68,7 @@ abstract contract RewardsClaim is RewardsStorage {
     }
 
     function _claim(address earner, address to) internal returns (address[] memory, uint256[] memory) {
+        require(!blacklisted[earner], "blacklisted earner");
         uint256[] memory claimedRewards = new uint256[](tokens.length);
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
