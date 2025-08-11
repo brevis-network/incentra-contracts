@@ -62,7 +62,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
         address _submissionAddress
     ) external {
         initOwner(owner);
-        grantRole(ROOT_UPDATER_ROLE, root_updater);
+        _grantRole(ROOT_UPDATER_ROLE, root_updater);
         config = cfg;
         messageBus = _messageBus;
         submissionChainId = _submissionChainId;

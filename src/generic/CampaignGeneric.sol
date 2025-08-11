@@ -22,7 +22,7 @@ contract CampaignGeneric is RewardsUpdateGeneric, RewardsClaim {
     ) external {
         initOwner(owner);
         _initConfig(cfg, brv, vks, dataChainId);
-        grantRole(REWARD_UPDATER_ROLE, rewardUpdater);
+        _grantRole(REWARD_UPDATER_ROLE, rewardUpdater);
         _setExternalPayoutAddress(externalPayoutAddress);
     }
 
