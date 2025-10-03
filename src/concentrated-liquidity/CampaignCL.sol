@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../rewards/same-chain/RewardsClaim.sol";
 import "./RewardsUpdateCL.sol";
 
-// submit and claim campaign rewards on a same chain
+// submit and claim campaign rewards on the same chain
 contract CampaignCL is RewardsUpdateCL, RewardsClaim {
     using SafeERC20 for IERC20;
 
