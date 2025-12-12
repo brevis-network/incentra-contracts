@@ -244,7 +244,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
                 AddrAmt memory reward = config.rewards[i];
                 require(
                     (address(_erc20) != reward.token)
-                        || (_amount <= (balance - (reward.amount - tokenClaimedRewards[reward.token]))),
+                        || (_amount + reward.amount <= balance + tokenClaimedRewards[reward.token]),
                     "cannot recover reserved reward token"
                 );
             }
