@@ -10,7 +10,7 @@ pragma solidity ^0.8.20;
  * By default, the owner account will be the one that deploys the contract. This
  * can later be changed with {transferOwnership}.
  *
- * This module is used through inheritance. It will make available the modifier
+ * This module is used through inheritance. It will make the modifier available
  * `onlyOwner`, which can be applied to your functions to restrict their use to
  * the owner.
  *

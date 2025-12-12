@@ -55,7 +55,7 @@ interface ITransparentUpgradeableProxy is IERC1967 {
  * and the functions declared in {ITransparentUpgradeableProxy} will be resolved in favor of the new one. This could
  * render the admin operations inaccessible, which could prevent upgradeability. Transparency may also be compromised.
  *
- * NOTE (brevis): Copied from OpenZeppelin Contracts v4.9.0. Chose not to use v5 to avoid deploying many unnecessary
+ * NOTE (brevis): Copied from OpenZeppelin Contracts v4.9.0. Choose not to use v5 to avoid deploying many unnecessary
  * {ProxyAdmin} contracts.
  */
 contract TransparentUpgradeableProxy is ERC1967Proxy {
