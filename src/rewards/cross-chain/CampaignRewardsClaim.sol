@@ -228,6 +228,7 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
 
     /**
      * @notice Allows the owner to recover any non-reward ERC20 tokens mistakenly sent to this contract
+     *    or reward tokens in excess of (configured amount - claimed amount).
      * @param _erc20 Address of the ERC20 token to recover
      * @param _to Address to send the recovered tokens to
      * @param _amount Amount of tokens to recover
@@ -235,11 +236,20 @@ contract CampaignRewardsClaim is AccessControl, MessageReceiverApp {
     function recoverERC20(IERC20 _erc20, address _to, uint256 _amount) external onlyOwner {
         require(_to != address(0), "invalid recipient");
         require(_amount > 0, "amount must be greater than 0");
-        for (uint256 i = 0; i < config.rewards.length; i++) {
-            require(address(_erc20) != config.rewards[i].token, "cannot recover reward token");
+        uint256 balance = _erc20.balanceOf(address(this));
+        require(_amount <= balance, "insufficient balance");
+
+        if (config.externalPayoutAddress == address(0)) {
+            for (uint256 i = 0; i < config.rewards.length; i++) {
+                AddrAmt memory reward = config.rewards[i];
+                require(
+                    (address(_erc20) != reward.token)
+                        || (_amount + reward.amount <= balance + tokenClaimedRewards[reward.token]),
+                    "cannot recover reserved reward token"
+                );
+            }
         }
 
-        require(_amount <= _erc20.balanceOf(address(this)), "insufficient balance");
         _erc20.safeTransfer(_to, _amount);
     }
 }
