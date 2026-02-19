@@ -154,6 +154,7 @@ abstract contract RewardsMerkle is RewardsStorage, MessageSenderApp {
     {
         require(state == State.Idle, "invalid state");
         require(epoch == currEpoch, "invalid epoch");
+        require(_rewards.contains(user), "user has no rewards");
 
         address[] memory rewardTokens = getTokens();
         rewardAmounts = _rewards.getAmounts(user, rewardTokens);

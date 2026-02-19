@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../RewardsStorage.sol";
+import "../ClaimEventHub.sol";
 import "../../lib/EnumerableMap.sol";
 
 // claim campaign rewards on chain X
@@ -25,7 +26,8 @@ abstract contract RewardsClaim is RewardsStorage {
 
     mapping(address => bool) public blacklisted; // blacklisted addresses cannot claim rewards
 
-    event RewardsClaimed(address indexed earner, uint256[] claimedRewards);
+    address public claimEventHub;
+
     event GracePeriodUpdated(uint64 gracePeriod);
     event BlacklistUpdated(address indexed earner, bool isBlacklisted);
 
@@ -56,6 +58,10 @@ abstract contract RewardsClaim is RewardsStorage {
         emit BlacklistUpdated(earner, isBlacklisted);
     }
 
+    function setClaimEventHub(address _claimEventHub) external onlyRole(REWARD_UPDATER_ROLE) {
+        claimEventHub = _claimEventHub;
+    }
+
     function setGracePeriod(uint64 _gracePeriod) external onlyOwner {
         gracePeriod = _gracePeriod;
         emit GracePeriodUpdated(_gracePeriod);
@@ -69,13 +75,14 @@ abstract contract RewardsClaim is RewardsStorage {
 
     function _claim(address earner, address to) internal returns (address[] memory, uint256[] memory) {
         require(!blacklisted[earner], "blacklisted earner");
-        uint256[] memory claimedRewards = new uint256[](tokens.length);
+        uint256[] memory newAmounts = new uint256[](tokens.length);
+        uint256[] memory cumulativeAmounts = new uint256[](tokens.length);
         bool hasUnclaimed = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            uint256 cumulativeAmount = _rewards.get(earner, token);
-            uint256 tosend = cumulativeAmount - claimed[earner][token];
-            claimed[earner][token] = cumulativeAmount;
+            cumulativeAmounts[i] = _rewards.get(earner, token);
+            uint256 tosend = cumulativeAmounts[i] - claimed[earner][token];
+            claimed[earner][token] = cumulativeAmounts[i];
             // send token
             if (tosend > 0) {
                 if (externalPayoutAddress == address(0)) {
@@ -86,10 +93,10 @@ abstract contract RewardsClaim is RewardsStorage {
                 tokenClaimedRewards[token] += tosend;
                 hasUnclaimed = true;
             }
-            claimedRewards[i] = tosend;
+            newAmounts[i] = tosend;
         }
         require(hasUnclaimed, "no unclaimed rewards");
-        emit RewardsClaimed(earner, claimedRewards);
-        return (tokens, claimedRewards);
+        ClaimEventHub(claimEventHub).emitRewardsClaimed(earner, newAmounts, cumulativeAmounts);
+        return (tokens, newAmounts);
     }
 }
